@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "cmd",
+      "name": "示例 Command Prompt",
+      "icon": "",
+      "executablePath": "cmd.exe",
+      "arguments": [],
+      "postLaunchInput": "",
+      "workingDirectory": "{{home}}/示例 项目",
+      "environment": {
+        "ARK_SAMPLE": "value=with=equals"
+      },
+      "runAsAdministrator": false,
+      "shellIntegration": "Disabled",
+      "terminal": {
+        "fontFamily": "Cascadia Mono",
+        "fontSize": 14,
+        "foregroundColor": "#CCCCCC",
+        "backgroundColor": "#1E1E1E",
+        "scrollbackLines": 5000
+      },
+      "agentRecipe": null
+    }
+  ]
+}

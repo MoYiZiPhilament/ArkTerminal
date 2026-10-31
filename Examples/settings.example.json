@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "appearance": {
+    "uiFontFamily": "Segoe UI",
+    "uiFontSize": 14,
+    "terminalFontFamily": "Cascadia Mono",
+    "terminalFontSize": 14,
+    "terminalFontWeight": 400,
+    "terminalLineHeight": 1.15,
+    "terminalCharacterSpacing": 0,
+    "terminalLigatures": false,
+    "accentColor": "#4688F1"
+  },
+  "defaultProfileId": "cmd",
+  "history": {
+    "enabled": false,
+    "maxEntries": 1000,
+    "retentionDays": 30
+  },
+  "transcription": {
+    "enabled": false,
+    "maxFileSizeBytes": 10485760,
+    "maxTotalSizeBytes": 104857600,
+    "retentionDays": 7
+  },
+  "workbench": {
+    "tabPosition": "Top",
+    "confirmCloseRunning": true,
+    "commandPaletteHotkeyEnabled": true,
+    "commandPaletteHotkey": "Ctrl+Shift+Space"
+  }
+}

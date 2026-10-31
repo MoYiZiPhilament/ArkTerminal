@@ -1,0 +1,28 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArkTerminal", "ArkTerminal.csproj", "{21CA9A00-9F85-4256-A4B5-E03F9E6EE4BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArkTerminal.Core", "ArkTerminal.Core\ArkTerminal.Core.csproj", "{D59B3DB3-2FB1-4E6E-92F0-571C0D480001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArkTerminal.Terminal", "ArkTerminal.Terminal\ArkTerminal.Terminal.csproj", "{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{21CA9A00-9F85-4256-A4B5-E03F9E6EE4BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21CA9A00-9F85-4256-A4B5-E03F9E6EE4BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21CA9A00-9F85-4256-A4B5-E03F9E6EE4BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21CA9A00-9F85-4256-A4B5-E03F9E6EE4BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
