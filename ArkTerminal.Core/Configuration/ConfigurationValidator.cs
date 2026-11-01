@@ -33,6 +33,7 @@ public static class ConfigurationValidator
                 issues.Add(new("appearance.terminal", "终端字重、行高或字距无效。"));
             }
             ValidateColor(settings.Appearance.AccentColor, "appearance.accentColor", issues);
+            ValidateVisual(settings.Appearance.Visual, issues);
         }
 
         if (settings.History is null || settings.History.MaxEntries is < 1 or > 1_000_000 || settings.History.RetentionDays is < 1 or > 3650)
@@ -160,6 +161,57 @@ public static class ConfigurationValidator
         }
 
         return ValidationResult.FromIssues(issues);
+    }
+
+    private static void ValidateVisual(VisualSettings? visual, List<ValidationIssue> issues)
+    {
+        if (visual is null)
+        {
+            issues.Add(new("appearance.visual", "视觉配置不能为空。"));
+            return;
+        }
+        if (!Enum.IsDefined(visual.Theme) || !Enum.IsDefined(visual.Material) ||
+            !Enum.IsDefined(visual.BackgroundFit) || !Enum.IsDefined(visual.BackgroundPosition))
+        {
+            issues.Add(new("appearance.visual", "主题、材质或背景布局选项无效。"));
+        }
+        if (!IsStableId(visual.AuroraPresetId) || visual.AuroraCustomColors is null ||
+            visual.AuroraCustomColors.Count is < 3 or > 6)
+        {
+            issues.Add(new("appearance.visual.aurora", "极光预设或自定义颜色数量无效。"));
+        }
+        else
+        {
+            for (var index = 0; index < visual.AuroraCustomColors.Count; index++)
+            {
+                ValidateColor(visual.AuroraCustomColors[index], $"appearance.visual.auroraCustomColors[{index}]", issues);
+            }
+        }
+        if (!double.IsFinite(visual.BackgroundOverlayOpacity) || visual.BackgroundOverlayOpacity is < 0 or > VisualSettingsLimits.MaxOverlayOpacity ||
+            !double.IsFinite(visual.BackgroundBlurRadius) || visual.BackgroundBlurRadius is < 0 or > VisualSettingsLimits.MaxBackgroundBlurRadius ||
+            !double.IsFinite(visual.BackgroundBrightness) || visual.BackgroundBrightness is < VisualSettingsLimits.MinBackgroundBrightness or > VisualSettingsLimits.MaxBackgroundBrightness ||
+            !double.IsFinite(visual.BackgroundSaturation) || visual.BackgroundSaturation is < 0 or > VisualSettingsLimits.MaxBackgroundSaturation ||
+            !double.IsFinite(visual.TerminalBackgroundOpacity) || visual.TerminalBackgroundOpacity is < VisualSettingsLimits.MinTerminalBackgroundOpacity or > 1)
+        {
+            issues.Add(new("appearance.visual", "背景或终端不透明度参数超出允许范围。"));
+        }
+        ValidateBackgroundPath(visual.BackgroundImagePath, issues);
+    }
+
+    private static void ValidateBackgroundPath(string? path, List<ValidationIssue> issues)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+        var normalized = path.Replace('\\', '/');
+        var fileName = normalized.StartsWith("Backgrounds/", StringComparison.OrdinalIgnoreCase) ? normalized[12..] : string.Empty;
+        if (path.Length > 260 || path.Contains('\0') || Path.IsPathRooted(path) ||
+            string.IsNullOrWhiteSpace(fileName) || fileName is "." or ".." || fileName.Contains('/') ||
+            fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            issues.Add(new("appearance.visual.backgroundImagePath", "背景图须是 Backgrounds 目录内的相对文件路径。"));
+        }
     }
 
     private static void ValidateFont(string? family, double size, string path, List<ValidationIssue> issues)

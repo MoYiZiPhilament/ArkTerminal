@@ -6,13 +6,13 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using ArkTerminal.Commands;
 using ArkTerminal.Core.Configuration;
 using ArkTerminal.Core.Profiles;
 using ArkTerminal.Core.Storage;
 using ArkTerminal.Infrastructure;
 using ArkTerminal.Sessions;
+using ArkTerminal.Visuals;
 
 namespace ArkTerminal;
 
@@ -23,7 +23,10 @@ public partial class MainWindow : Window
     private readonly CommandRegistry _commands = new();
     private readonly GlobalHotkeyService _hotkey = new();
     private readonly WindowCommandKeyService _commandKeys = new();
+    private readonly WindowVisualCoordinator _visuals;
+    private readonly HashSet<string> _importedBackgrounds = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _draftDebounce;
+    private string _previewBackgroundPath = string.Empty;
     private CancellationTokenSource? _layoutDebounce;
     private CancellationTokenSource? _detectCancellation;
     private TabViewModel? _attachedTab;
@@ -39,6 +42,13 @@ public partial class MainWindow : Window
     {
         _host = host;
         InitializeComponent();
+        _visuals = new WindowVisualCoordinator(this, TerminalView, BackgroundImage, BackgroundOverlay, ReadabilityOverlay, AuroraView, host.Paths);
+        _visuals.PresentationChanged += () =>
+        {
+            VisualCapabilityText.Text = _visuals.CapabilityText;
+            UpdateDraftControls();
+            UpdatePerformanceButton();
+        };
         _tabs = new TerminalTabsViewModel(host.Sessions);
         TabStrip.ItemsSource = _tabs.Tabs;
         _tabs.ActiveTabChanged += AttachActiveTab;
@@ -82,6 +92,7 @@ public partial class MainWindow : Window
         _commands.Register(new CommandDescriptor { Id = "workbench.new", Title = "新建页", Category = "标签", Keywords = "new shell agent", ExecuteAsync = _ => { _tabs.ShowNewPage(); return Task.CompletedTask; } });
         _commands.Register(new CommandDescriptor { Id = "workbench.settings", Title = "打开设置", Category = "设置", Keywords = "外观 快捷键 草稿", ExecuteAsync = _ => { ShowSettings(); return Task.CompletedTask; } });
         _commands.Register(new CommandDescriptor { Id = "workbench.focus", Title = "切换专注模式", Category = "视图", Keywords = "focus Ctrl+Shift+F11", ExecuteAsync = _ => { ToggleFocusMode(); return Task.CompletedTask; } });
+        _commands.Register(new CommandDescriptor { Id = "workbench.performance", Title = "切换一键性能模式", Category = "视图", Keywords = "performance 极光 透明 模糊 动效", ExecuteAsync = _ => { TogglePerformanceMode(); return Task.CompletedTask; } });
         _commands.Register(() => _tabs.Tabs.Select(tab => new CommandDescriptor
         {
             Id = $"tab.activate.{tab.TabId:N}",
@@ -119,6 +130,7 @@ public partial class MainWindow : Window
         NewPage.Visibility = tab.IsNewPage ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = Visibility.Collapsed;
         TerminalPanel.Visibility = tab.IsNewPage ? Visibility.Collapsed : Visibility.Visible;
+        MotionPolicy.Show(tab.IsNewPage ? NewPage : TerminalPanel, _visuals.AnimationsEnabled);
         Title = $"ArkTerminal · {tab.Title}";
         if (!tab.IsNewPage && tab.Session is not null && tab.Launch is not null)
         {
@@ -305,10 +317,11 @@ public partial class MainWindow : Window
         {
             if (TabStrip.ItemContainerGenerator.ContainerFromItem(tab) is FrameworkElement container)
             {
-                var transform = new TranslateTransform(TabStrip.OrientationEx == Orientation.Horizontal ? 8 : 0, TabStrip.OrientationEx == Orientation.Vertical ? 8 : 0);
-                container.RenderTransform = transform;
-                transform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(100)));
-                transform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(100)));
+                MotionPolicy.Drop(
+                    container,
+                    TabStrip.OrientationEx == Orientation.Horizontal ? 8 : 0,
+                    TabStrip.OrientationEx == Orientation.Vertical ? 8 : 0,
+                    _visuals.AnimationsEnabled);
             }
         });
     }
@@ -488,6 +501,9 @@ public partial class MainWindow : Window
         NewPage.Visibility = Visibility.Collapsed;
         TerminalPanel.Visibility = Visibility.Collapsed;
         SettingsPanel.Visibility = Visibility.Visible;
+        LoadSettingsControls(_host.Draft?.Settings ?? _host.FormalSettings);
+        UpdateDraftControls();
+        MotionPolicy.Show(SettingsPanel, _visuals.AnimationsEnabled);
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings();
@@ -498,25 +514,57 @@ public partial class MainWindow : Window
         _initializing = true;
         FontSizeInput.Text = settings.Appearance.UiFontSize.ToString(CultureInfo.InvariantCulture);
         FontSize = settings.Appearance.UiFontSize;
-        foreach (ComboBoxItem item in TabPositionInput.Items)
-        {
-            if ((string)item.Tag == settings.Workbench.TabPosition.ToString()) TabPositionInput.SelectedItem = item;
-        }
+        SelectTaggedItem(TabPositionInput, settings.Workbench.TabPosition.ToString());
         ConfirmCloseInput.IsChecked = settings.Workbench.ConfirmCloseRunning;
         HotkeyEnabledInput.IsChecked = settings.Workbench.CommandPaletteHotkeyEnabled;
         HotkeyInput.Text = settings.Workbench.CommandPaletteHotkey;
+        var visual = settings.Appearance.Visual;
+        SelectTaggedItem(ThemeInput, visual.Theme.ToString());
+        SelectTaggedItem(MaterialInput, visual.Material.ToString());
+        DesktopBackgroundInput.IsChecked = visual.DesktopBackgroundEnabled;
+        AuroraEnabledInput.IsChecked = visual.AuroraEnabled;
+        SelectTaggedItem(AuroraPresetInput, visual.AuroraPresetId);
+        AuroraColorsInput.Text = string.Join(", ", visual.AuroraCustomColors);
+        _previewBackgroundPath = visual.BackgroundImagePath;
+        BackgroundPathText.Text = string.IsNullOrEmpty(_previewBackgroundPath) ? "未设置" : Path.GetFileName(_previewBackgroundPath);
+        BackgroundOverlayInput.Value = visual.BackgroundOverlayOpacity;
+        BackgroundBlurInput.Value = visual.BackgroundBlurRadius;
+        BackgroundBrightnessInput.Value = visual.BackgroundBrightness;
+        BackgroundSaturationInput.Value = visual.BackgroundSaturation;
+        SelectTaggedItem(BackgroundFitInput, visual.BackgroundFit.ToString());
+        SelectTaggedItem(BackgroundPositionInput, visual.BackgroundPosition.ToString());
+        TerminalOpacityInput.Value = visual.TerminalBackgroundOpacity;
         _initializing = false;
         ApplyTabPosition(settings.Workbench.TabPosition);
+        _visuals.Apply(settings.Appearance);
+        VisualCapabilityText.Text = _visuals.CapabilityText;
     }
 
     private void UpdateDraftControls()
     {
         var editing = _host.Draft is not null;
         FontSizeInput.IsEnabled = editing;
+        VisualSettingsControls.IsEnabled = editing;
+        MaterialInput.IsEnabled = editing && _visuals.SupportsSystemBackdrop;
+        DesktopBackgroundInput.IsEnabled = editing && _visuals.SupportsDesktopBackground;
         SaveDraftButton.IsEnabled = editing;
         CancelDraftButton.IsEnabled = editing;
         EditDraftButton.IsEnabled = _host.CanEdit && !editing;
     }
+
+    private static void SelectTaggedItem(ComboBox comboBox, string tag)
+    {
+        foreach (ComboBoxItem item in comboBox.Items)
+        {
+            if (string.Equals((string)item.Tag, tag, StringComparison.OrdinalIgnoreCase))
+            {
+                comboBox.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private static string GetTag(ComboBox comboBox) => (comboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? string.Empty;
 
     private async void EditDraftButton_Click(object sender, RoutedEventArgs e)
     {
@@ -525,6 +573,7 @@ public partial class MainWindow : Window
 
     private void FontSizeInput_TextChanged(object sender, TextChangedEventArgs e) => PreviewDraft();
     private void WorkbenchInput_Changed(object sender, RoutedEventArgs e) => PreviewDraft();
+    private void VisualInput_Changed(object sender, RoutedEventArgs e) => PreviewDraft();
 
     private void PreviewDraft()
     {
@@ -540,10 +589,79 @@ public partial class MainWindow : Window
         preview.Workbench.ConfirmCloseRunning = ConfirmCloseInput.IsChecked == true;
         preview.Workbench.CommandPaletteHotkeyEnabled = HotkeyEnabledInput.IsChecked == true;
         preview.Workbench.CommandPaletteHotkey = HotkeyInput.Text;
+        var visual = preview.Appearance.Visual;
+        visual.Theme = Enum.Parse<AppThemeMode>(GetTag(ThemeInput));
+        if (_visuals.SupportsSystemBackdrop)
+        {
+            visual.Material = Enum.Parse<WindowMaterialMode>(GetTag(MaterialInput));
+        }
+        if (_visuals.SupportsDesktopBackground)
+        {
+            visual.DesktopBackgroundEnabled = DesktopBackgroundInput.IsChecked == true;
+        }
+        visual.AuroraEnabled = AuroraEnabledInput.IsChecked == true;
+        visual.AuroraPresetId = GetTag(AuroraPresetInput);
+        visual.AuroraCustomColors = AuroraColorsInput.Text.Split([',', ';', '，'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+        visual.BackgroundImagePath = _previewBackgroundPath;
+        visual.BackgroundOverlayOpacity = BackgroundOverlayInput.Value;
+        visual.BackgroundBlurRadius = BackgroundBlurInput.Value;
+        visual.BackgroundBrightness = BackgroundBrightnessInput.Value;
+        visual.BackgroundSaturation = BackgroundSaturationInput.Value;
+        visual.BackgroundFit = Enum.Parse<BackgroundImageFit>(GetTag(BackgroundFitInput));
+        visual.BackgroundPosition = Enum.Parse<BackgroundImagePosition>(GetTag(BackgroundPositionInput));
+        visual.TerminalBackgroundOpacity = TerminalOpacityInput.Value;
+        var validation = ConfigurationValidator.ValidateSettings(preview);
+        if (!validation.IsValid)
+        {
+            StatusText.Text = validation.Summary;
+            return;
+        }
         _host.UpdateDraft(preview);
         FontSize = size;
         ApplyTabPosition(preview.Workbench.TabPosition);
+        _visuals.Apply(preview.Appearance);
         ScheduleDraftSave();
+    }
+
+    private async void ImportBackground_Click(object sender, RoutedEventArgs e)
+    {
+        if (_host.Draft is null) return;
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选择背景图（副本将保存到当前数据根）",
+            Filter = "支持的图片|*.png;*.jpg;*.jpeg;*.bmp|PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        BackgroundStatusText.Text = "正在后台验证并复制图片…";
+        try
+        {
+            var result = await _visuals.ImportBackgroundAsync(dialog.FileName, CancellationToken.None);
+            if (!result.Success)
+            {
+                BackgroundStatusText.Text = result.Error;
+                return;
+            }
+            _previewBackgroundPath = result.ResourcePath;
+            _importedBackgrounds.Add(result.ResourcePath);
+            BackgroundPathText.Text = Path.GetFileName(result.ResourcePath);
+            BackgroundStatusText.Text = "图片副本已就绪；保存设置后正式使用。";
+            PreviewDraft();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            BackgroundStatusText.Text = $"背景图导入失败：{exception.Message}";
+        }
+    }
+
+    private void ClearBackground_Click(object sender, RoutedEventArgs e)
+    {
+        if (_host.Draft is null) return;
+        _previewBackgroundPath = string.Empty;
+        BackgroundPathText.Text = "未设置";
+        BackgroundStatusText.Text = "预览已清除背景图；应用拥有的未引用副本将在保存或取消后清理。";
+        PreviewDraft();
     }
 
     private void ScheduleDraftSave()
@@ -573,6 +691,7 @@ public partial class MainWindow : Window
         PreviewDraft();
         if (_host.Draft is null) return false;
         var old = _host.FormalSettings!;
+        var previousBackground = old.Appearance.Visual.BackgroundImagePath;
         var desired = _host.Draft.Settings.Workbench;
         var changed = old.Workbench.CommandPaletteHotkeyEnabled != desired.CommandPaletteHotkeyEnabled || old.Workbench.CommandPaletteHotkey != desired.CommandPaletteHotkey;
         if (changed && !_hotkey.Configure(desired.CommandPaletteHotkeyEnabled, desired.CommandPaletteHotkey, out var error))
@@ -590,6 +709,7 @@ public partial class MainWindow : Window
         LoadSettingsControls(_host.FormalSettings);
         UpdateDraftControls();
         HotkeyStatusText.Text = _hotkey.StatusText;
+        await CleanupBackgroundCopiesAsync(previousBackground);
         return ShowResult(result, "正式设置已保存；草稿已清理。");
     }
 
@@ -602,7 +722,30 @@ public partial class MainWindow : Window
         if (!ShowResult(result, "预览已取消，草稿已删除。")) return false;
         LoadSettingsControls(_host.FormalSettings);
         UpdateDraftControls();
+        await CleanupBackgroundCopiesAsync();
         return true;
+    }
+
+    private async Task CleanupBackgroundCopiesAsync(string? previousFormalBackground = null)
+    {
+        var candidates = _importedBackgrounds.ToList();
+        if (!string.IsNullOrEmpty(previousFormalBackground))
+        {
+            candidates.Add(previousFormalBackground);
+        }
+        var retained = new[] { _host.FormalSettings?.Appearance.Visual.BackgroundImagePath, _host.Draft?.Settings.Appearance.Visual.BackgroundImagePath };
+        try
+        {
+            foreach (var path in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                await _visuals.DeleteBackgroundAsync(path, retained, CancellationToken.None);
+            }
+            _importedBackgrounds.Clear();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            BackgroundStatusText.Text = $"设置已生效，但未引用的背景副本清理失败：{exception.Message}";
+        }
     }
 
     private void ApplyTabPosition(TerminalTabPosition position)
@@ -660,11 +803,29 @@ public partial class MainWindow : Window
         if (_attachedTab?.Session is not null) TerminalView.FocusInput();
     }
 
+    private void PerformanceMode_Click(object sender, RoutedEventArgs e) => TogglePerformanceMode();
+
+    private void TogglePerformanceMode()
+    {
+        _visuals.TogglePerformanceMode();
+        UpdatePerformanceButton();
+        StatusText.Text = _visuals.PerformanceModeEnabled
+            ? "性能模式已启用：极光、透明/材质、模糊和非必要动效已临时关闭。"
+            : "性能模式已退出：已恢复当前正式设置或草稿的视觉偏好。";
+    }
+
+    private void UpdatePerformanceButton()
+    {
+        PerformanceModeButton.Content = _visuals.PerformanceModeEnabled ? "退出性能模式" : "性能模式";
+    }
+
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
         var source = (HwndSource)PresentationSource.FromVisual(this)!;
         _hotkey.Attach(source);
         _commandKeys.Attach(source);
+        _visuals.Attach(source);
+        VisualCapabilityText.Text = _visuals.CapabilityText;
         var settings = _host.FormalSettings?.Workbench;
         if (settings is not null)
         {
@@ -682,6 +843,7 @@ public partial class MainWindow : Window
         Show();
         Activate();
         CommandPalette.Visibility = Visibility.Visible;
+        MotionPolicy.Show(CommandPalette, _visuals.AnimationsEnabled, 12);
         CommandInput.Text = string.Empty;
         RefreshCommands();
         CommandInput.Focus();
@@ -727,7 +889,7 @@ public partial class MainWindow : Window
     }
 
     private void ReturnBottom_Click(object sender, RoutedEventArgs e) => TerminalView.ScrollToBottom();
-    private void ShowSearch() { SearchPanel.Visibility = Visibility.Visible; SearchInput.Focus(); SearchInput.SelectAll(); }
+    private void ShowSearch() { SearchPanel.Visibility = Visibility.Visible; MotionPolicy.Show(SearchPanel, _visuals.AnimationsEnabled, 4); SearchInput.Focus(); SearchInput.SelectAll(); }
 
     private async void SearchInput_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -788,6 +950,7 @@ public partial class MainWindow : Window
             await _tabs.CloseAllAsync();
             var shutdown = await _host.ShutdownAsync();
             if (!ShowResult(shutdown, string.Empty)) return;
+            _visuals.Dispose();
             _allowClose = true;
             Close();
         }

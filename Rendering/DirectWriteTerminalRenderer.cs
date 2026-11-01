@@ -20,6 +20,10 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
     private readonly Dictionary<BrushKey, LinkedListNode<BrushEntry>> _brushes = new();
     private readonly LinkedList<BrushEntry> _lru = new();
     private ID2D1RenderTarget? _target;
+    private ID2D1SolidColorBrush? _backgroundBrush;
+    private ID2D1SolidColorBrush? _selectionBrush;
+    private ID2D1SolidColorBrush? _searchBrush;
+    private ID2D1SolidColorBrush? _cursorBrush;
 
     public DirectWriteTerminalRenderer(TerminalViewLimits limits) => _limits = limits;
 
@@ -33,27 +37,32 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
         int endRow,
         string composition,
         TerminalSelection? selection,
-        IReadOnlyList<TerminalSearchMatch> searchMatches)
+        IReadOnlyList<TerminalSearchMatch> searchMatches,
+        TerminalVisualStyle visualStyle)
     {
         EnsureTarget(target);
-        if (startRow == 0 && endRow >= snapshot.Lines.Count - 1)
+        EnsureStyleBrushes(visualStyle);
+        var fullFrame = startRow == 0 && endRow >= snapshot.Lines.Count - 1;
+        if (fullFrame)
         {
-            target.Clear(new Color4(30 / 255f, 30 / 255f, 30 / 255f, 1));
+            target.Clear(ToColor4(visualStyle.Background, visualStyle.BackgroundOpacity));
         }
 
         for (var row = startRow; row <= endRow && row < snapshot.Lines.Count; row++)
         {
             var y = (float)(row * fonts.LineHeight);
             var rowRect = new Rect(0, y, (float)(snapshot.Columns * fonts.CellWidth), (float)fonts.LineHeight);
-            // A previous row can evict this brush while drawing many distinct colors.
-            target.FillRectangle(rowRect, GetBrush(target, TerminalColor.FromRgb(30, 30, 30), TerminalColor.FromRgb(30, 30, 30)));
+            if (!fullFrame)
+            {
+                target.FillRectangle(rowRect, _backgroundBrush!);
+            }
             var line = snapshot.Lines[row];
             var selected = selection?.GetColumnRange(line.LineId, snapshot.Columns);
             if (selected is not null)
             {
                 target.FillRectangle(
                     new Rect((float)(selected.Value.Start * fonts.CellWidth), y, (float)((selected.Value.End - selected.Value.Start) * fonts.CellWidth), (float)fonts.LineHeight),
-                    GetBrush(target, TerminalColor.FromRgb(54, 88, 128), TerminalColor.FromRgb(54, 88, 128)));
+                    _selectionBrush!);
             }
             foreach (var match in searchMatches)
             {
@@ -61,25 +70,25 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
                 {
                     target.FillRectangle(
                         new Rect((float)(match.StartColumn * fonts.CellWidth), y, (float)((match.EndColumn - match.StartColumn) * fonts.CellWidth), (float)fonts.LineHeight),
-                        GetBrush(target, TerminalColor.FromRgb(110, 95, 40), TerminalColor.FromRgb(110, 95, 40)));
+                        _searchBrush!);
                 }
             }
-            DrawLine(target, line, fonts, y);
+            DrawLine(target, line, fonts, y, visualStyle);
         }
 
         if (snapshot.CursorVisible)
         {
             var cursorX = (float)(snapshot.CursorColumn * fonts.CellWidth);
             var cursorY = (float)(snapshot.CursorRow * fonts.LineHeight);
-            var cursorBrush = GetBrush(target, TerminalColor.FromRgb(220, 220, 220), TerminalColor.FromRgb(220, 220, 220));
-            target.DrawRectangle(new Rect(cursorX + 1, cursorY + 1, (float)Math.Max(3, fonts.CellWidth - 2), (float)(fonts.LineHeight - 2)), cursorBrush, 1);
+            target.DrawRectangle(new Rect(cursorX + 1, cursorY + 1, (float)Math.Max(3, fonts.CellWidth - 2), (float)(fonts.LineHeight - 2)), _cursorBrush!, 1);
         }
 
         if (composition.Length > 0 && snapshot.CursorVisible && snapshot.CursorRow >= 0 && snapshot.CursorRow < snapshot.Rows)
         {
             var columns = Math.Max(1, GetTextColumns(composition));
             var layout = fonts.GetLayout(composition, false, columns);
-            var brush = GetBrush(target, TerminalColor.Default, TerminalColor.Default);
+            var defaultForeground = TerminalColor.FromRgb(visualStyle.Foreground.R, visualStyle.Foreground.G, visualStyle.Foreground.B);
+            var brush = GetBrush(target, TerminalColor.Default, defaultForeground);
             var origin = new Vector2(
                 (float)(snapshot.CursorColumn * fonts.CellWidth),
                 (float)(snapshot.CursorRow * fonts.LineHeight));
@@ -110,9 +119,11 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
         ClearBrushes();
     }
 
-    private void DrawLine(ID2D1RenderTarget target, TerminalLineSnapshot line, TerminalFontService fonts, float y)
+    private void DrawLine(ID2D1RenderTarget target, TerminalLineSnapshot line, TerminalFontService fonts, float y, TerminalVisualStyle visualStyle)
     {
         var groups = fonts.Options.Ligatures ? CreateLigatureGroups(line.Clusters) : CreateClusterGroups(line.Clusters);
+        var defaultBackground = TerminalColor.FromRgb(visualStyle.Background.R, visualStyle.Background.G, visualStyle.Background.B);
+        var defaultForeground = TerminalColor.FromRgb(visualStyle.Foreground.R, visualStyle.Foreground.G, visualStyle.Foreground.B);
         foreach (var group in groups)
         {
             var foreground = group.Inverse ? group.Background : group.Foreground;
@@ -122,7 +133,7 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
             var rect = new Rect(x, y, width, (float)fonts.LineHeight);
             if (background.Kind != TerminalColorKind.Default)
             {
-                target.FillRectangle(rect, GetBrush(target, background, TerminalColor.FromRgb(30, 30, 30)));
+                target.FillRectangle(rect, GetBrush(target, background, defaultBackground));
             }
             if (string.IsNullOrWhiteSpace(group.Text))
             {
@@ -130,7 +141,7 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
             }
 
             var layout = fonts.GetLayout(group.Text, group.Bold, group.Columns);
-            var brush = GetBrush(target, foreground, TerminalColor.FromRgb(220, 220, 220));
+            var brush = GetBrush(target, foreground, defaultForeground);
             target.PushAxisAlignedClip(rect, AntialiasMode.PerPrimitive);
             target.DrawTextLayout(
                 new Vector2(x, y),
@@ -195,6 +206,24 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
         _target = target;
     }
 
+    private void EnsureStyleBrushes(TerminalVisualStyle style)
+    {
+        if (_backgroundBrush is not null)
+        {
+            return;
+        }
+        _backgroundBrush = _target!.CreateSolidColorBrush(ToColor4(style.Background, style.BackgroundOpacity));
+        _selectionBrush = _target.CreateSolidColorBrush(ToColor4(style.Selection, 1));
+        _searchBrush = _target.CreateSolidColorBrush(ToColor4(style.Search, 1));
+        _cursorBrush = _target.CreateSolidColorBrush(ToColor4(style.Cursor, 1));
+    }
+
+    private static Color4 ToColor4(System.Windows.Media.Color color, double opacity) => new(
+        color.R / 255f,
+        color.G / 255f,
+        color.B / 255f,
+        (float)(color.A / 255d * opacity));
+
     private ID2D1SolidColorBrush GetBrush(ID2D1RenderTarget target, TerminalColor color, TerminalColor defaultColor)
     {
         var effective = color.Kind == TerminalColorKind.Default ? defaultColor : color;
@@ -238,6 +267,14 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
         }
         _brushes.Clear();
         _lru.Clear();
+        _backgroundBrush?.Dispose();
+        _selectionBrush?.Dispose();
+        _searchBrush?.Dispose();
+        _cursorBrush?.Dispose();
+        _backgroundBrush = null;
+        _selectionBrush = null;
+        _searchBrush = null;
+        _cursorBrush = null;
         _target = null;
     }
 

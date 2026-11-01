@@ -22,6 +22,13 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
     private TerminalScreenSnapshot? _snapshot;
     private TerminalFontService? _fonts;
     private TerminalFontOptions _fontOptions = new();
+    private TerminalVisualStyle _visualStyle = new(
+        Color.FromRgb(30, 30, 30),
+        Color.FromRgb(220, 220, 220),
+        Color.FromRgb(54, 88, 128),
+        Color.FromRgb(110, 95, 40),
+        Color.FromRgb(220, 220, 220),
+        1);
     private double _attachedFontSize = 14;
     private TerminalScreenChangedEventArgs? _pendingChanges;
     private bool _renderQueued;
@@ -294,6 +301,17 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         RecreateFonts();
     }
 
+    public void ApplyVisualStyle(TerminalVisualStyle style)
+    {
+        if (_visualStyle == style)
+        {
+            return;
+        }
+        _visualStyle = style;
+        _renderer.Dispose();
+        RequestFullRender();
+    }
+
     public void FocusInput()
     {
         if (_imeHost is not null)
@@ -544,6 +562,10 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             var startRow = 0;
             var endRow = snapshot.Lines.Count - 1;
             Int32Rect? dirtyRect = null;
+            if (_visualStyle.BackgroundOpacity < 0.999)
+            {
+                _fullInvalidation = true;
+            }
             if (!_fullInvalidation && _pendingChanges is not null)
             {
                 startRow = Math.Clamp(_pendingChanges.DirtyStartRow, 0, Math.Max(0, endRow));
@@ -556,7 +578,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             }
             var presented = await _surface.RenderAsync(
                 (float)(96 * scale),
-                target => _renderer.Draw(target, snapshot, _fonts!, startRow, endRow, _composition, _selection, _searchMatches),
+                target => _renderer.Draw(target, snapshot, _fonts!, startRow, endRow, _composition, _selection, _searchMatches, _visualStyle),
                 dirtyRect,
                 () => version == _renderVersion);
             if (presented)

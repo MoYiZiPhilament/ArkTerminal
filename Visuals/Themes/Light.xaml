@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="Theme.TerminalBackground">#FCFCFC</Color>
+    <Color x:Key="Theme.TerminalForeground">#202124</Color>
+    <Color x:Key="Theme.TerminalSelection">#A9CBEF</Color>
+    <Color x:Key="Theme.TerminalSearch">#E5D176</Color>
+    <Color x:Key="Theme.TerminalCursor">#404040</Color>
+    <SolidColorBrush x:Key="Theme.WindowBackground" Color="#F3F5F9"/>
+    <SolidColorBrush x:Key="Theme.SurfaceBackground" Color="#F9FAFC"/>
+    <SolidColorBrush x:Key="Theme.CardBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Theme.PrimaryText" Color="#1B1F24"/>
+    <SolidColorBrush x:Key="Theme.SecondaryText" Color="#5D6673"/>
+    <SolidColorBrush x:Key="Theme.BorderBrush" Color="#CCD3DD"/>
+    <SolidColorBrush x:Key="Theme.ActiveTabBackground" Color="#DDEBFF"/>
+    <SolidColorBrush x:Key="Theme.HoverBackground" Color="#E8EDF4"/>
+    <SolidColorBrush x:Key="Theme.ErrorBackground" Color="#FFF3F3"/>
+    <SolidColorBrush x:Key="Theme.ErrorBorder" Color="#CC4444"/>
+    <SolidColorBrush x:Key="Theme.RecoveryBackground" Color="#F5F8FF"/>
+    <SolidColorBrush x:Key="Theme.RecoveryBorder" Color="#99BBEE"/>
+    <SolidColorBrush x:Key="Theme.OverlayBackground" Color="#F8F8F8"/>
+</ResourceDictionary>

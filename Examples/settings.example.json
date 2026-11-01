@@ -9,7 +9,23 @@
     "terminalLineHeight": 1.15,
     "terminalCharacterSpacing": 0,
     "terminalLigatures": false,
-    "accentColor": "#4688F1"
+    "accentColor": "#4688F1",
+    "visual": {
+      "theme": "System",
+      "material": "Auto",
+      "desktopBackgroundEnabled": false,
+      "auroraEnabled": true,
+      "auroraPresetId": "borealis",
+      "auroraCustomColors": ["#7C3AED", "#2563EB", "#10B981"],
+      "backgroundImagePath": "",
+      "backgroundOverlayOpacity": 0.25,
+      "backgroundBlurRadius": 0,
+      "backgroundBrightness": 1,
+      "backgroundSaturation": 1,
+      "backgroundFit": "UniformToFill",
+      "backgroundPosition": "Center",
+      "terminalBackgroundOpacity": 0.9
+    }
   },
   "defaultProfileId": "cmd",
   "history": {
