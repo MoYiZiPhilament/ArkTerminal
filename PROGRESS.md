@@ -13,6 +13,20 @@
 - 两包 19 项结构 / 许可 / 隔离 / MSIX 签名检查通过，MSIX 全部 627 个文件 / 3,920 个 SHA-256 块核验通过；开发签名只验证密码学与发布者匹配，未建立信任或安装。该轮临时证据位于 `C:\Users\1\.codex\visualizations\2026\11\04\01a1a470-aaff-7c53-8126-182588548178`。
 - [GitHub 预发布](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v0.1.1a-preview)提供自包含便携 ZIP、开发签名 MSIX、公开开发证书、分发元数据与 SHA-256 清单。推荐 ZIP 试用，MSIX 仅供隔离开发验证。发布预览不改变下文已有的验收缺口。
 
+### 同版本追加 MSI
+
+同版本的 MSI 追加：`Packaging/Build-Msi.ps1` / `Installer.wxs` 直接封装已发布
+ZIP 的应用二进制，新增 `ArkTerminal-0.1.1a-preview-win-x64.msi` 与独立
+`SHA256SUMS-msi.txt`，不替换原有附件或改写标签。显示版本不变，MSI 数字产品版本为
+`0.1.1`；按当前用户安装到 `%LOCALAPPDATA%\Programs\ArkTerminal`，配置使用标准
+APPDATA 数据根。WiX CLI / UI 扩展固定 4.0.6，不新增应用 NuGet 依赖。
+ICE 校验（排除纯当前用户布局的预期 ICE91 提示）和 25 项外部检查通过，行政解包后
+621 个原有文件与发布 ZIP 的 SHA-256 一致；其余差异为说明、MSI 元数据和 UI 组件许可 / 源码。
+解包 exe 使用 `--portable` 隔离测试时正常启动 / 退出、无新建页子进程、加载本地运行时；
+没有运行日常系统的真实安装 / 修复 / 卸载，未改正式用户数据。完整安装与升级验收仍待补。
+MSI 未签名，SHA-256 为 `4707a80e30a71d153d1330e4bbeb71a66ad3758f9b1f61b0b9d459902db6a170`。
+证据在本轮临时目录的 `msi` 子目录。
+
 ## 阶段总览
 
 | 阶段 | 当前实现 | 验证状态与主要缺口 |

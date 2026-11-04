@@ -2,6 +2,11 @@
 
 ## 0.1.1a-preview 图标与 GitHub 预发布（2026-11-04）
 
+- 后续用户明确确认追加 MSI，继续使用 `0.1.1a-preview`。新增 `Packaging/Build-Msi.ps1` / `Installer.wxs`，WiX CLI / UI 4.0.6 固定，仅封装现有 ZIP；去掉便携标记与空数据目录，按当前用户安装到 LOCALAPPDATA/Programs/ArkTerminal，使用标准 APPDATA 数据根。开始菜单 / ARP 图标、卸载、数字 MSI ProductVersion=0.1.1、稳定 UpgradeCode 与拒绝 ALLUSERS 已定义。无新增应用 NuGet 依赖或应用二进制修改。
+- MSI 的 WiX UI EULA 打印辅助器保持原样，MS-RL 许可和对应提交的完整源码 ZIP 随包；归档固定 SHA-256，构建缓存和 .wix 扩展缓存不入 Git。许可 / 来源见 `Packaging/MSI-NOTICES.md`。
+- 最终 MSI 76,898,500 字节，SHA-256 `4707a80e30a71d153d1330e4bbeb71a66ad3758f9b1f61b0b9d459902db6a170`。ICE（仅排除预期 ICE91）及 25 项生产包检查通过，真实 msiexec 行政解包后 621 个原有文件逐一匹配已发布 ZIP；程序在隔离 `--portable` 模式下启动退出 / 新建页无子进程 / 自包含模块来源通过。未在日常系统真正安装、修复、卸载或升级，不宣称这些场景通过；正式用户数据未修改。临时证据为本轮目录的 `msi/checks-result.json`。
+- MSI 与 `SHA256SUMS-msi.txt` 追加至原 Release，保留原五个附件及 `v0.1.1a-preview` 标签。安装脚本 / 说明以新提交快进同步 main；不是重新发布应用二进制或变更 MSIX 验收结论。
+
 - 用户明确授权使用参考对话最后的俯视图作为应用图标，更新为 `0.1.1a-preview`，提交、同步 GitHub 并创建 Release。本轮发布为 GitHub prerelease，不代表阶段 10 最终验收通过。
 - 原图由用户提供本地路径，字节保留于 `Assets/AppIcon.png`，SHA-256 为 `4809cd611109a7d28a5bf60e7062ac626a4a13c6ba757b5f56bbfec20d4f10a9`。只转换尺寸 / 格式，未重新生成或修改图案；exe 使用九尺寸 ICO，窗口嵌入同一 ICO，MSIX 从同一 PNG 生成透明图标。
 - `Directory.Build.props` 的 `Version=0.1.1-a-preview` 满足 NuGet 格式，`InformationalVersion=0.1.1a-preview` 用于显示与包文件名，数字版本为 `0.1.1.0`；运行时与第三方依赖版本未更改，锁文件中的项目引用版本同步更新。

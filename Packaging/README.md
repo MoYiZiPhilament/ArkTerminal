@@ -31,6 +31,43 @@ pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin 'C:\Program Files (x86)\W
 Windows SDK 提供工具，也可从微软官方 NuGet 包解压后把 `bin/10.0.28000.0/x64`
 传给脚本。生成包可复现，时间戳、开发证书和签名每次不同，文件散列不保证相同。
 
+## MSI 安装包
+
+同一 `0.1.1a-preview` Release 另提供 `ArkTerminal-0.1.1a-preview-win-x64.msi`
+和独立的 `SHA256SUMS-msi.txt`，原 ZIP / MSIX 不替换。MSI 直接封装同版本
+便携 ZIP 的程序文件，不重新编译应用；去掉 `portable.flag` 和空 `data`，
+补充 MSI 元数据、维护说明及安装界面组件的许可 / 对应源码。
+
+双击 MSI 后按安装界面操作。它仅支持当前用户，固定安装到
+`%LOCALAPPDATA%\Programs\ArkTerminal`，提供开始菜单入口和系统卸载入口，
+不自动启动应用。普通运行使用 `%APPDATA%\ArkTerminal`，没有 MSIX 包身份。
+它与已有标准 exe 共享该数据根，与 ZIP 的便携数据隔离；不自动迁移数据。
+升级、修复或卸载前先退出应用并备份数据；卸载只清理 MSI 管理的程序、快捷方式
+和安装登记，不删除 APPDATA 下的配置 / 快照 / 记录。
+
+产品名称和文件名使用完整 `0.1.1a-preview`，应用仍显示该版本。
+Windows Installer 的 `ProductVersion` 按其三段数字规则使用 `0.1.1`；
+后续 MSI 自动大版本替换要求前三段至少一段增加，同数字版本不视作升级。
+MSI 没有 Authenticode 签名，不使用 MSIX 的开发证书，也不导入证书或安装运行时。
+当前验证覆盖 ICE 校验、行政解包、逐文件比对及解包后的程序启动；
+干净环境的实际安装、修复、卸载与升级仍待验收。
+
+构建需要固定的 [WiX CLI 4.0.6](https://www.nuget.org/packages/wix/4.0.6)
+和 UI 扩展 4.0.6，均为构建工具，不增加应用 NuGet 依赖：
+
+```powershell
+dotnet tool install wix --version 4.0.6 --tool-path obj/Tools/wix4 --allow-roll-forward
+obj/Tools/wix4/wix.exe extension add WixToolset.UI.wixext/4.0.6
+pwsh -File Packaging/Build-Msi.ps1
+```
+
+在仓库根目录执行上述命令，先生成或放入同版本便携 ZIP。已有同名 MSI 时脚本停止。
+默认输出仍是 `bin/Packages/0.1.1a-preview/`，可用 `-PortableZip` 指定输入 ZIP，
+`-WixPath` 指定同版本工具。脚本执行标准 ICE 校验，只排除纯当前用户布局的
+预期 ICE91 提示，不排除其他校验项。安装界面包含未修改的 WiX UI 打印许可辅助器，
+其 MS-RL 许可、对应提交的完整源码归档及散列随 MSI 携带，见
+[MSI-NOTICES.md](MSI-NOTICES.md)。源码首次下载到 `obj/Tools` 缓存，后续构建核对 SHA-256。
+
 ## 系统范围与签名
 
 包清单的技术下限为 Windows 10 build 17763（ConPTY 引入版本）；.NET 10

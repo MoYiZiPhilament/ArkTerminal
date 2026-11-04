@@ -1,0 +1,37 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="ArkTerminal $(var.DisplayVersion)" Manufacturer="MoYiZiPhilament"
+           Version="$(var.MsiVersion)" UpgradeCode="D458DA80-5017-47AD-98FC-FEB4C099CB14"
+           Scope="perUser" InstallerVersion="500" Language="1033">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of ArkTerminal is already installed."
+                  Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Icon Id="AppIcon.ico" SourceFile="$(var.AppIcon)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/MoYiZiPhilament/ArkTerminal" />
+    <Launch Condition="NOT ALLUSERS" Message="ArkTerminal supports current-user installation only." />
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="ArkTerminal" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="ArkTerminal">
+        <Component Id="StartMenu" Guid="*">
+          <Shortcut Id="LaunchArkTerminal" Name="ArkTerminal" Target="[INSTALLFOLDER]ArkTerminal.exe"
+                    WorkingDirectory="INSTALLFOLDER" Icon="AppIcon.ico" />
+          <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
+          <RemoveFolder Id="RemoveEmptyProgramsFolder" Directory="ProgramsFolder" On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\ArkTerminal\Installer" Name="StartMenu"
+                         Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <Feature Id="Application" Title="ArkTerminal" Level="1">
+      <ComponentGroupRef Id="Payload" />
+      <ComponentRef Id="StartMenu" />
+    </Feature>
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+  </Package>
+</Wix>

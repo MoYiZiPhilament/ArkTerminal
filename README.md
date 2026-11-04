@@ -47,6 +47,12 @@ dotnet run --project ArkTerminal.csproj -c Release --no-build -- --portable
 本版本使用用户选定的 Camellia 俯视图作为 exe、窗口和 MSIX 图标，保留蓝色背景及透明圆角。
 MSIX 为开发签名测试附件，默认不受系统信任，安装和权限验证仍未完成。
 
+同一 Release 已追加 `ArkTerminal-0.1.1a-preview-win-x64.msi` 和
+`SHA256SUMS-msi.txt`。MSI 仅为当前用户安装，提供开始菜单 / 卸载入口，
+使用标准模式的 `%APPDATA%\ArkTerminal`；其校验与行政解包检查已通过，
+干净环境的实际安装、修复、卸载和升级仍待验收。具体路径与构建见
+[MSI 安装说明](Packaging/README.md#msi-安装包)。
+
 `Packaging/Build-Packages.ps1` 生成自包含 `win-x64` 便携 ZIP 和 full-trust MSIX，
 随包携带 .NET / WindowsDesktop 10.0.11、MCP 桥、许可及使用说明。
 提权辅助器复用主 exe 的独立辅助进程入口。源码版本与运行时固定于
