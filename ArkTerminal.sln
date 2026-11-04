@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArkTerminal.Core", "ArkTerm
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArkTerminal.Terminal", "ArkTerminal.Terminal\ArkTerminal.Terminal.csproj", "{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArkTerminal.Mcp", "ArkTerminal.Mcp\ArkTerminal.Mcp.csproj", "{D59B3DB3-2FB1-4E6E-92F0-571C0D480003}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D59B3DB3-2FB1-4E6E-92F0-571C0D480002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D59B3DB3-2FB1-4E6E-92F0-571C0D480003}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

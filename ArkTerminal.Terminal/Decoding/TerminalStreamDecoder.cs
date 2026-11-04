@@ -15,13 +15,15 @@ public sealed class TerminalStreamDecoder
     public TerminalStreamDecoder(
         TerminalScreen screen,
         TerminalSessionOptions options,
-        Action<ReadOnlyMemory<byte>>? respond = null)
+        Action<ReadOnlyMemory<byte>>? respond = null,
+        Action<string>? osc = null,
+        Action<string>? text = null)
     {
         ArgumentNullException.ThrowIfNull(screen);
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         _characters = new char[options.ReadBufferSize * 2 + 8];
-        _parser = new VtParser(screen, options, _diagnostics, response => respond?.Invoke(response));
+        _parser = new VtParser(screen, options, _diagnostics, response => respond?.Invoke(response), osc, text);
     }
 
     public TerminalDiagnosticSnapshot Diagnostics => _diagnostics.Snapshot();

@@ -24,6 +24,9 @@ public sealed class TerminalTabsViewModel
     public event Action? ActiveTabChanged;
     public event Action? LayoutChanged;
     public event Action<TabViewModel>? TabDetaching;
+    public Func<SessionLaunchRequest, Task<SessionLaunchRequest?>>? ConfirmElevatedLaunch { get; set; }
+    public Func<TabViewModel, SessionLaunchRequest, Task<SessionLaunchRequest?>>? PrepareAgentLaunch { get; set; }
+    public event Action<ConPtySession>? SessionAttached;
     public ObservableCollection<TabViewModel> Tabs { get; } = [];
     public TabViewModel ActiveTab { get => _activeTab; private set { if (_activeTab == value) return; _activeTab.IsActive = false; _activeTab = value; _activeTab.IsActive = true; ActiveTabChanged?.Invoke(); LayoutChanged?.Invoke(); } }
     public IEnumerable<TabViewModel> RunningTabs => Tabs.Where(tab => tab.Session?.State == SessionState.Running);
@@ -98,6 +101,9 @@ public sealed class TerminalTabsViewModel
     }
 
     public async Task RestartAsync(TabViewModel tab, CancellationToken cancellationToken = default)
+        => await RestartAsync(tab, tab.Launch, cancellationToken);
+
+    public async Task RestartAsync(TabViewModel tab, TabLaunchConfiguration? replacement, CancellationToken cancellationToken = default)
     {
         if (tab.Launch is null || _closing)
         {
@@ -107,6 +113,10 @@ public sealed class TerminalTabsViewModel
         try
         {
             await StopCoreAsync(tab, cancellationToken);
+            tab.Launch = replacement;
+            tab.ZoomFontSize = null;
+            tab.ScrollbackOffset = 0;
+            tab.SearchQuery = string.Empty;
             await StartCoreAsync(tab, cancellationToken);
         }
         finally
@@ -170,7 +180,7 @@ public sealed class TerminalTabsViewModel
         ActiveTab = Tabs[(index + delta % Tabs.Count + Tabs.Count) % Tabs.Count];
     }
 
-    public IReadOnlyList<RecoveryTabState> CaptureLayout() => Tabs.Where(tab => tab.Launch is not null).Select((tab, index) => tab.ToRecoveryState(index)).ToArray();
+    public IReadOnlyList<RecoveryTabState> CaptureLayout() => Tabs.Where(tab => tab.Launch is { IsTransientAgent: false }).Select((tab, index) => tab.ToRecoveryState(index)).ToArray();
 
     public void RemoveRecoveredPlaceholders()
     {
@@ -213,19 +223,46 @@ public sealed class TerminalTabsViewModel
         tab.State = TabRuntimeState.Starting;
         try
         {
-            var session = (ConPtySession)await _sessions.CreateAsync(tab.Launch.Request, cancellationToken);
+            var request = tab.Launch.Request;
+            if (request.AgentRecipe is not null)
+            {
+                request = PrepareAgentLaunch is null ? throw new InvalidOperationException("Agent 启动入口尚未就绪。") : await PrepareAgentLaunch(tab, request);
+                if (request is null) { tab.State = TabRuntimeState.NotStarted; return; }
+            }
+            if (request.RunAsAdministrator)
+            {
+                var approved = ConfirmElevatedLaunch is null ? null : await ConfirmElevatedLaunch(request);
+                if (approved is null) { tab.State = TabRuntimeState.NotStarted; return; }
+                request = approved;
+            }
+            var session = (ConPtySession)await _sessions.CreateAsync(request, cancellationToken);
             tab.Session = session;
+            SessionAttached?.Invoke(session);
             tab.SessionGeneration++;
             var generation = tab.SessionGeneration;
             session.StateChanged += (_, args) => Post(() => OnSessionState(tab, session, generation, args));
-            session.SnapshotChanged += (_, args) => Post(() => OnSnapshot(tab, session, generation, args.SessionId));
+            var lastTitle = session.ShellTitle;
+            tab.ShellTitle = lastTitle;
+            session.SnapshotChanged += (_, args) =>
+            {
+                var title = session.ShellTitle;
+                if (lastTitle == title) return;
+                lastTitle = title;
+                Post(() => OnSnapshot(tab, session, generation, args.SessionId, title));
+            };
             tab.State = session.State == SessionState.Running ? TabRuntimeState.Running : TabRuntimeState.Exited;
             if (ActiveTab == tab)
             {
                 ActiveTabChanged?.Invoke();
             }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (OperationCanceledException exception)
+        {
+            tab.State = TabRuntimeState.NotStarted;
+            tab.Error = exception.Message;
+            if (ActiveTab == tab) ActiveTabChanged?.Invoke();
+        }
+        catch (Exception exception)
         {
             tab.State = TabRuntimeState.Failed;
             tab.Error = exception.Message;
@@ -274,13 +311,13 @@ public sealed class TerminalTabsViewModel
         }
     }
 
-    private void OnSnapshot(TabViewModel tab, ConPtySession session, long generation, Guid sessionId)
+    private void OnSnapshot(TabViewModel tab, ConPtySession session, long generation, Guid sessionId, string title)
     {
         if (tab.Session != session || tab.SessionGeneration != generation || sessionId != session.Id)
         {
             return;
         }
-        tab.ShellTitle = session.GetSnapshot().ShellTitle;
+        tab.ShellTitle = title;
     }
 
     private void Post(Action action)

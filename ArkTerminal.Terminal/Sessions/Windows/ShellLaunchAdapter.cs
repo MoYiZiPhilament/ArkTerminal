@@ -10,10 +10,10 @@ internal static class ShellLaunchAdapter
     internal static void Validate(SessionLaunchRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.RunAsAdministrator)
-        {
-            throw new PlatformNotSupportedException("管理员会话将在阶段 7 提供；未启动进程。");
-        }
+        if (request.RunAsAdministrator && Elevation.ElevationSupport.UnavailableReason is { } reason)
+            throw new PlatformNotSupportedException(reason);
+        if (request.AgentRecipe is not null)
+            throw new InvalidOperationException("Agent 配方必须先经 AgentLauncher 校验与解析，不能作为普通 Shell 启动。");
         if (string.IsNullOrWhiteSpace(request.ExecutablePath))
         {
             throw new ArgumentException("可执行文件不能为空。", nameof(request));
@@ -66,6 +66,15 @@ internal static class ShellLaunchAdapter
 
     internal static string BuildEnvironmentBlock(IReadOnlyDictionary<string, string> overrides)
     {
+        var environment = SnapshotEnvironment(overrides);
+        var builder = new StringBuilder();
+        foreach (var pair in environment.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+            builder.Append(pair.Key).Append('=').Append(pair.Value).Append('\0');
+        return builder.Append('\0').ToString();
+    }
+
+    private static Dictionary<string, string> SnapshotEnvironment(IReadOnlyDictionary<string, string> overrides)
+    {
         var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
         {
@@ -83,11 +92,15 @@ internal static class ShellLaunchAdapter
             environment[name] = value;
         }
 
-        var builder = new StringBuilder();
-        foreach (var pair in environment.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
-        {
-            builder.Append(pair.Key).Append('=').Append(pair.Value).Append('\0');
-        }
-        return builder.Append('\0').ToString();
+        return environment;
     }
+
+    internal static SessionLaunchRequest ResolveRequest(SessionLaunchRequest request) => new()
+    {
+        ProfileId = request.ProfileId, WorkspaceId = request.WorkspaceId, ExecutablePath = ResolveExecutablePath(request.ExecutablePath),
+        WorkingDirectory = ResolveWorkingDirectory(request.WorkingDirectory), Arguments = request.Arguments.ToArray(),
+        Environment = SnapshotEnvironment(request.Environment), PostLaunchInput = request.PostLaunchInput,
+        ScrollbackLines = request.ScrollbackLines, RunAsAdministrator = request.RunAsAdministrator,
+        ShellIntegration = request.ShellIntegration, AgentRecipe = request.AgentRecipe
+    };
 }

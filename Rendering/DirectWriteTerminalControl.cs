@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using ArkTerminal.Input;
 using ArkTerminal.Search;
 using ArkTerminal.Selection;
@@ -16,6 +18,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
     private readonly D3DImage _image = new();
     private readonly Direct3DSharedSurface _surface;
     private readonly DirectWriteTerminalRenderer _renderer;
+    private readonly TerminalCursorMotion _cursorMotion = new();
     private readonly TerminalViewLimits _limits = new();
     private WpfTextInputBridge? _imeHost;
     private ConPtySession? _session;
@@ -31,6 +34,9 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         1);
     private double _attachedFontSize = 14;
     private TerminalScreenChangedEventArgs? _pendingChanges;
+    private readonly object _snapshotSync = new();
+    private TerminalScreenChangedEventArgs? _queuedChanges;
+    private bool _snapshotUpdateQueued;
     private bool _renderQueued;
     private int _renderVersion;
     private bool _fullInvalidation = true;
@@ -48,10 +54,27 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
     private int _searchBufferLineCount;
     private readonly System.Windows.Threading.DispatcherTimer _renderRetry;
     private string? _lastRenderError;
+    private TerminalScreenSnapshot? _preview;
+    private long _publishedFrames;
+    private long _redrawRequests;
+    private bool _cursorAnimationEnabled = true;
+    private bool _cursorRenderingSubscribed;
+    public bool HasUserZoom { get; private set; }
+    public bool IsComposing => _imeHost?.OwnsKeyInput == true;
+    public long PublishedFrames => Interlocked.Read(ref _publishedFrames);
+    public long RedrawRequests => Interlocked.Read(ref _redrawRequests);
+    public long EstimatedSharedTextureBytes => _surface.EstimatedSharedTextureBytes;
+    public bool RenderPending => _renderQueued;
+    public TerminalVisualStyle VisualStyle => _visualStyle;
+    public string? ResolvedFontFamily => _fonts?.ResolvedFontFamily;
+    public bool CursorAnimationActive => _cursorMotion.IsAnimating;
 
     public DirectWriteTerminalControl()
     {
         Focusable = false;
+        UseLayoutRounding = true;
+        SnapsToDevicePixels = true;
+        RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
         _surface = new Direct3DSharedSurface(_image);
@@ -65,9 +88,20 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             _renderRetry.Stop();
             QueueRender();
         };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible)
+            {
+                _renderRetry.Stop();
+                _cursorMotion.Reset();
+                SyncCursorAnimationClock();
+                _surface.ResetResources();
+            }
+            else RequestFullRender();
+        };
         Loaded += (_, _) =>
         {
-            if (_imeHost is null)
+            if (_preview is null && _imeHost is null)
             {
                 _imeHost = new WpfTextInputBridge();
                 _imeHost.CommitText += Submit;
@@ -96,14 +130,18 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         Unloaded += (_, _) =>
         {
             _renderRetry.Stop();
+            _cursorMotion.Reset();
+            SyncCursorAnimationClock();
             _imeHost?.CancelComposition();
             _surface.ResetResources();
         };
     }
 
     public event Action<string>? InputError;
+    public event Action<ArkTerminal.Terminal.Integration.TerminalLink>? LinkRequested;
     public event Action? ViewportChanged;
     public event Action? SearchRequested;
+    public void RequestSearch() => SearchRequested?.Invoke();
 
     public double DpiScale => VisualTreeHelper.GetDpi(this).PixelsPerDip;
     public double CellWidth => _fonts?.CellWidth ?? 8;
@@ -120,6 +158,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         Detach();
         _fontOptions = fontOptions ?? new TerminalFontOptions();
         _attachedFontSize = _fontOptions.FontSize;
+        HasUserZoom = false;
         _session = session;
         _session.SnapshotChanged += OnSnapshotChanged;
         _scrollbackOffset = scrollbackOffset;
@@ -138,12 +177,16 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
     {
         _renderRetry.Stop();
         _renderVersion++;
+        _cursorMotion.Reset();
+        SyncCursorAnimationClock();
         _imeHost?.CancelComposition();
         if (_session is not null)
         {
             _session.SnapshotChanged -= OnSnapshotChanged;
         }
         _session = null;
+        lock (_snapshotSync) _queuedChanges = null;
+        _preview = null;
         _snapshot = null;
         _pendingChanges = null;
         _composition = string.Empty;
@@ -171,6 +214,8 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         if (!active)
         {
             _renderRetry.Stop();
+            _cursorMotion.Reset();
+            SyncCursorAnimationClock();
             _surface.CancelFrame();
         }
         if (active)
@@ -297,8 +342,76 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
 
     public void ApplyFontOptions(TerminalFontOptions options)
     {
+        if (_fontOptions == options) return;
         _fontOptions = options;
         RecreateFonts();
+    }
+
+    public void SetFontBaseline(TerminalFontOptions options, double? zoom = null)
+    {
+        _attachedFontSize = options.FontSize;
+        HasUserZoom = zoom is not null;
+        ApplyFontOptions(zoom is { } size ? options with { FontSize = size } : options);
+    }
+
+    public void ResetZoom()
+    {
+        HasUserZoom = false;
+        ApplyFontOptions(_fontOptions with { FontSize = _attachedFontSize });
+    }
+
+    public void AttachPreview(TerminalFontOptions options)
+    {
+        if (_preview is not null && _fontOptions == options) return;
+        if (_preview is null)
+        {
+            Detach();
+            var screen = new Terminal.Screen.TerminalScreen(80, 5, 0);
+            var decoder = new Terminal.Decoding.TerminalStreamDecoder(screen, new());
+            var bytes = System.Text.Encoding.UTF8.GetBytes("ArkTerminal  Aa 0123456789\r\n中文 · e\u0301 · 👩‍💻 · 🇨🇳\r\n== != => ->  fi fl  字簇与固定列网格\r\n字体预览不会启动 Shell 或执行文本。\r\n");
+            decoder.Write(bytes, bytes.Length);
+            decoder.Complete();
+            _preview = screen.GetSnapshot(Guid.Empty);
+            _snapshot = _preview;
+        }
+        SetFontBaseline(options);
+        RequestFullRender();
+    }
+
+    public void ScrollPages(int direction) => ScrollLines(direction * Math.Max(1, (_snapshot?.Rows ?? 2) - 1));
+    public void ScrollToTop() => ScrollLines(_snapshot?.ScrollbackLines ?? 0);
+    private void ScrollLines(int lines)
+    {
+        if (_snapshot is null || _snapshot.IsAlternateScreen) return;
+        _imeHost?.CancelComposition();
+        _scrollbackOffset = Math.Clamp(_scrollbackOffset + lines, 0, _snapshot.ScrollbackLines);
+        RefreshSnapshot();
+        RequestFullRender();
+    }
+
+    public void ClearBuffer(bool scrollback)
+    {
+        if (_session is null) return;
+        _imeHost?.CancelComposition();
+        _selection = null;
+        CancelSearch();
+        _searchMatches = [];
+        _activeSearchMatch = -1;
+        _scrollbackOffset = 0;
+        if (scrollback) { _session.ClearScrollback(); _scrollbackOffset = 0; }
+        else _session.ClearViewport();
+        RefreshSnapshot();
+        RequestFullRender();
+    }
+
+    public async Task SelectAllAsync()
+    {
+        var session = _session;
+        if (session is null) return;
+        var text = await Task.Run(session.CaptureText);
+        if (_session != session || text.Lines.Count == 0 || text.Generation != _snapshot?.Generation) return;
+        _selection = new(new(text.Lines[0].LineId, 0), new(text.Lines[^1].LineId, _snapshot.Columns));
+        RequestFullRender();
     }
 
     public void ApplyVisualStyle(TerminalVisualStyle style)
@@ -309,6 +422,15 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         }
         _visualStyle = style;
         _renderer.Dispose();
+        RequestFullRender();
+    }
+
+    public void SetAnimationsEnabled(bool enabled)
+    {
+        if (_cursorAnimationEnabled == enabled) return;
+        _cursorAnimationEnabled = enabled;
+        _cursorMotion.Reset();
+        SyncCursorAnimationClock();
         RequestFullRender();
     }
 
@@ -353,6 +475,12 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         drawingContext.DrawImage(_image, new Rect(0, 0, ActualWidth, ActualHeight));
     }
 
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        NotifyDpiChanged();
+    }
+
     protected override void OnTextInput(TextCompositionEventArgs e)
     {
         base.OnTextInput(e);
@@ -378,43 +506,11 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         var control = modifiers.HasFlag(ModifierKeys.Control);
         var alt = modifiers.HasFlag(ModifierKeys.Alt);
         var shift = modifiers.HasFlag(ModifierKeys.Shift);
-        if (control && e.Key == Key.F)
+        if (_imeHost?.OwnsKeyInput == true) return;
+        if (_session.State == SessionState.Running && IsInputFocused && e.Key == Key.Space && modifiers is ModifierKeys.None or ModifierKeys.Shift)
         {
-            SearchRequested?.Invoke();
-            e.Handled = true;
-            return;
-        }
-        if (control && shift && e.Key == Key.C)
-        {
-            _ = CopySelectionAsync();
-            e.Handled = true;
-            return;
-        }
-        if (control && shift && e.Key == Key.V)
-        {
-            e.Handled = true;
-            _ = PasteAsync();
-            return;
-        }
-        if (_imeHost?.OwnsKeyInput == true)
-        {
-            return;
-        }
-        if (control && e.Key == Key.D0)
-        {
-            ApplyFontOptions(_fontOptions with { FontSize = _attachedFontSize });
-            e.Handled = true;
-            return;
-        }
-        if (control && e.Key is Key.OemPlus or Key.Add)
-        {
-            Zoom(1);
-            e.Handled = true;
-            return;
-        }
-        if (control && e.Key is Key.OemMinus or Key.Subtract)
-        {
-            Zoom(-1);
+            // TextBox handles Space as an editing command without raising TextInput.
+            Submit(" ");
             e.Handled = true;
             return;
         }
@@ -486,6 +582,15 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         }
         FocusInput();
         var position = HitTest(e.GetPosition(this), snapContinuationToLead: true);
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            try
+            {
+                var link = ArkTerminal.Terminal.Integration.TerminalLinks.Find(_snapshot, position.LineId, position.Column, _session?.ShellStatus.WorkingDirectory);
+                if (link is not null) { LinkRequested?.Invoke(link); e.Handled = true; return; }
+            }
+            catch (ArgumentException error) { InputError?.Invoke(error.Message); e.Handled = true; return; }
+        }
         _selection = new TerminalSelection(position, position);
         _selecting = true;
         CaptureMouse();
@@ -546,17 +651,24 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
 
     private async void RenderFrame()
     {
-        if (!_active || !IsLoaded || ActualWidth <= 0 || ActualHeight <= 0 || _session is null)
+        if (!_active || !IsLoaded || !IsVisible || ActualWidth <= 0 || ActualHeight <= 0 || (_session is null && _preview is null))
         {
             _renderQueued = false;
             return;
         }
         var version = _renderVersion;
         var retry = false;
+        var retryDelay = TimeSpan.FromMilliseconds(250);
         try
         {
             EnsureFonts();
-            var snapshot = _snapshot ??= _session.GetSnapshot(_scrollbackOffset);
+            var snapshot = _snapshot ??= _preview ?? _session!.GetSnapshot(_scrollbackOffset);
+            var cursorPosition = _cursorMotion.Update(snapshot, Stopwatch.GetTimestamp(), _cursorAnimationEnabled);
+            if (_cursorMotion.TargetChanged || _cursorMotion.IsAnimating)
+            {
+                // A cursor move can leave the previous row outside the parser's dirty range.
+                _fullInvalidation = true;
+            }
             var scale = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             _surface.Resize((int)Math.Ceiling(ActualWidth * scale), (int)Math.Ceiling(ActualHeight * scale));
             var startRow = 0;
@@ -578,18 +690,21 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             }
             var presented = await _surface.RenderAsync(
                 (float)(96 * scale),
-                target => _renderer.Draw(target, snapshot, _fonts!, startRow, endRow, _composition, _selection, _searchMatches, _visualStyle),
+                target => _renderer.Draw(target, snapshot, _fonts!, startRow, endRow, _composition, _selection, _searchMatches, _visualStyle, cursorPosition),
                 dirtyRect,
                 () => version == _renderVersion);
             if (presented)
             {
+                Interlocked.Increment(ref _publishedFrames);
                 InvalidateVisual();
                 _lastRenderError = null;
             }
             else
             {
                 _fullInvalidation = true;
-                retry = true;
+                // New output can supersede a healthy in-flight frame; draw the latest content immediately.
+                retry = version == _renderVersion || _surface.LastRenderWasBusy;
+                if (_surface.LastRenderWasBusy) retryDelay = TimeSpan.FromMilliseconds(16);
             }
             if (presented && version == _renderVersion)
             {
@@ -610,10 +725,12 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         finally
         {
             _renderQueued = false;
-            if (_active && IsLoaded && _session is not null && (_pendingChanges is not null || _fullInvalidation))
+            SyncCursorAnimationClock();
+            if (_active && IsLoaded && IsVisible && (_session is not null || _preview is not null) && (_pendingChanges is not null || _fullInvalidation))
             {
                 if (retry)
                 {
+                    _renderRetry.Interval = retryDelay;
                     _renderRetry.Start();
                 }
                 else
@@ -624,8 +741,28 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         }
     }
 
+    private void SyncCursorAnimationClock()
+    {
+        var shouldRun = _cursorMotion.IsAnimating && _cursorAnimationEnabled && _active && IsLoaded && IsVisible;
+        if (shouldRun == _cursorRenderingSubscribed) return;
+        if (shouldRun) System.Windows.Media.CompositionTarget.Rendering += OnCursorRendering;
+        else System.Windows.Media.CompositionTarget.Rendering -= OnCursorRendering;
+        _cursorRenderingSubscribed = shouldRun;
+    }
+
+    private void OnCursorRendering(object? sender, EventArgs e)
+    {
+        if (!_cursorMotion.IsAnimating)
+        {
+            SyncCursorAnimationClock();
+            return;
+        }
+        if (!_renderQueued && !_renderRetry.IsEnabled) RequestFullRender();
+    }
+
     private void RequestFullRender()
     {
+        Interlocked.Increment(ref _redrawRequests);
         _renderVersion++;
         _fullInvalidation = true;
         QueueRender();
@@ -633,12 +770,12 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
 
     private void QueueRender()
     {
-        if (_renderQueued || _renderRetry.IsEnabled || !_active || !IsLoaded || _session is null)
+        if (_renderQueued || _renderRetry.IsEnabled || !_active || !IsLoaded || !IsVisible || (_session is null && _preview is null))
         {
             return;
         }
         _renderQueued = true;
-        Dispatcher.BeginInvoke(RenderFrame);
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, RenderFrame);
     }
 
     private void RefreshSnapshot()
@@ -653,51 +790,72 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
 
     private void OnSnapshotChanged(object? sender, TerminalScreenChangedEventArgs e)
     {
-        Dispatcher.BeginInvoke(() =>
+        lock (_snapshotSync)
         {
-            if (_session is null || e.SessionId != _session.Id)
+            if (_session?.Id != e.SessionId) return;
+            _queuedChanges = _queuedChanges is null ? e : new TerminalScreenChangedEventArgs
             {
-                return;
-            }
-            _renderVersion++;
-            var oldScrollback = _snapshot?.ScrollbackLines ?? 0;
-            var wasAlternate = _snapshot?.IsAlternateScreen;
-            if (_scrollbackOffset > 0)
-            {
-                var latest = _session.GetSnapshot();
-                _scrollbackOffset = Math.Clamp(_scrollbackOffset + latest.ScrollbackLines - oldScrollback, 0, latest.ScrollbackLines);
-            }
+                SessionId = e.SessionId,
+                Generation = Math.Max(_queuedChanges.Generation, e.Generation),
+                DirtyStartRow = Math.Min(_queuedChanges.DirtyStartRow, e.DirtyStartRow),
+                DirtyEndRow = Math.Max(_queuedChanges.DirtyEndRow, e.DirtyEndRow)
+            };
+            if (_snapshotUpdateQueued) return;
+            _snapshotUpdateQueued = true;
+        }
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, ApplyQueuedSnapshotChanges);
+    }
+
+    private void ApplyQueuedSnapshotChanges()
+    {
+        TerminalScreenChangedEventArgs? e;
+        lock (_snapshotSync)
+        {
+            e = _queuedChanges;
+            _queuedChanges = null;
+            _snapshotUpdateQueued = false;
+        }
+        if (e is null || _session is null || e.SessionId != _session.Id)
+        {
+            return;
+        }
+        _renderVersion++;
+        var oldScrollback = _snapshot?.ScrollbackLines ?? 0;
+        var wasAlternate = _snapshot?.IsAlternateScreen;
+        if (_scrollbackOffset > 0)
+        {
+            var latest = _session.GetSnapshot();
+            _scrollbackOffset = Math.Clamp(_scrollbackOffset + latest.ScrollbackLines - oldScrollback, 0, latest.ScrollbackLines);
+        }
+        RefreshSnapshot();
+        if (wasAlternate != _snapshot!.IsAlternateScreen)
+        {
+            _selection = null;
+            _searchMatches = [];
+            _activeSearchMatch = -1;
+            CancelSearch();
+            _scrollbackOffset = 0;
             RefreshSnapshot();
-            if (wasAlternate != _snapshot!.IsAlternateScreen)
+        }
+        if (_pendingChanges is null)
+        {
+            _pendingChanges = e;
+        }
+        else
+        {
+            _pendingChanges = new TerminalScreenChangedEventArgs
             {
-                _selection = null;
-                _searchMatches = [];
-                _activeSearchMatch = -1;
-                CancelSearch();
-                _scrollbackOffset = 0;
-                RefreshSnapshot();
-            }
-            if (_pendingChanges is null)
-            {
-                _pendingChanges = e;
-            }
-            else
-            {
-                _pendingChanges = new TerminalScreenChangedEventArgs
-                {
-                    SessionId = e.SessionId,
-                    Generation = e.Generation,
-                    DirtyStartRow = Math.Min(_pendingChanges.DirtyStartRow, e.DirtyStartRow),
-                    DirtyEndRow = Math.Max(_pendingChanges.DirtyEndRow, e.DirtyEndRow)
-                };
-            }
-            if (_snapshot!.IsAlternateScreen || _snapshot.ScrollbackOffset != 0 || _pendingChanges.DirtyStartRow == 0 && _pendingChanges.DirtyEndRow >= _snapshot.Rows - 1)
-            {
-                _fullInvalidation = true;
-            }
-            QueueRender();
-            QueueResize();
-        });
+                SessionId = e.SessionId,
+                Generation = e.Generation,
+                DirtyStartRow = Math.Min(_pendingChanges.DirtyStartRow, e.DirtyStartRow),
+                DirtyEndRow = Math.Max(_pendingChanges.DirtyEndRow, e.DirtyEndRow)
+            };
+        }
+        if (_snapshot!.IsAlternateScreen || _snapshot.ScrollbackOffset != 0 || _pendingChanges.DirtyStartRow == 0 && _pendingChanges.DirtyEndRow >= _snapshot.Rows - 1)
+        {
+            _fullInvalidation = true;
+        }
+        QueueRender();
     }
 
     private void EnsureFonts()
@@ -707,6 +865,8 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
 
     private void RecreateFonts()
     {
+        _cursorMotion.Reset();
+        SyncCursorAnimationClock();
         _fonts?.Dispose();
         _fonts = null;
         EnsureFonts();
@@ -716,8 +876,9 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             InvalidateArrange();
     }
 
-    private void Zoom(int delta)
+    public void Zoom(int delta)
     {
+        HasUserZoom = true;
         var size = Math.Clamp(_fontOptions.FontSize + delta, 6, 96);
         ApplyFontOptions(_fontOptions with { FontSize = size });
     }
@@ -755,7 +916,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         }
     }
 
-    private async Task PasteAsync()
+    public async Task PasteAsync()
     {
         try
         {
@@ -796,7 +957,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         return new TerminalPosition(line.LineId, column);
     }
 
-    private async Task CopySelectionAsync()
+    public async Task CopySelectionAsync()
     {
         var selection = _selection;
         var session = _session;
@@ -806,13 +967,26 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         }
         try
         {
-            var text = await Task.Run(() => TerminalTextExtraction.Copy(selection, session.CaptureText()));
-            Clipboard.SetText(text);
+            var text = await Task.Run(() =>
+            {
+                var buffer = session.CaptureText();
+                if (!buffer.Lines.Any(line => line.LineId == selection.Anchor.LineId) || !buffer.Lines.Any(line => line.LineId == selection.Focus.LineId)) return string.Empty;
+                return TerminalTextExtraction.Copy(selection, buffer);
+            });
+            if (text.Length > 0) Clipboard.SetText(text);
         }
         catch (Exception exception)
         {
             InputError?.Invoke(exception.Message);
         }
+    }
+
+    public TerminalTextRange? GetContextSelection(Guid sessionId)
+    {
+        Dispatcher.VerifyAccess();
+        if (_session?.Id != sessionId || _selection is null || _selection.Anchor == _selection.Focus) return null;
+        var (start, end) = _selection.Ordered;
+        return new(start.LineId, start.Column, end.LineId, end.Column);
     }
 
     private void Submit(string text)

@@ -16,9 +16,16 @@ internal static class WindowsCommandLine
         return builder.ToString();
     }
 
-    private static void AppendArgument(StringBuilder builder, string argument)
+    internal static string QuoteArgument(string argument, bool forCmd = false)
     {
-        if (argument.Length > 0 && argument.IndexOfAny([' ', '\t', '"']) < 0)
+        var builder = new StringBuilder();
+        AppendArgument(builder, argument, forceQuotes: true, forCmd: forCmd);
+        return builder.ToString();
+    }
+
+    private static void AppendArgument(StringBuilder builder, string argument, bool forceQuotes = false, bool forCmd = false)
+    {
+        if (!forceQuotes && argument.Length > 0 && argument.IndexOfAny([' ', '\t', '"']) < 0)
         {
             builder.Append(argument);
             return;
@@ -36,8 +43,9 @@ internal static class WindowsCommandLine
 
             if (character == '"')
             {
-                builder.Append('\\', slashes * 2 + 1);
-                builder.Append('"');
+                // Paired quotes keep cmd's quote state balanced; a native argv parser recovers the literal quote.
+                builder.Append('\\', slashes * 2 + (forCmd ? 0 : 1));
+                builder.Append(forCmd ? "\"\"" : "\"");
             }
             else
             {

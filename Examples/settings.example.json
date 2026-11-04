@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "appearance": {
     "uiFontFamily": "Segoe UI",
@@ -9,6 +9,9 @@
     "terminalLineHeight": 1.15,
     "terminalCharacterSpacing": 0,
     "terminalLigatures": false,
+    "showTimestamps": false,
+    "showLogicalLineNumbers": false,
+    "showCommandDuration": false,
     "accentColor": "#4688F1",
     "visual": {
       "theme": "System",
@@ -31,6 +34,7 @@
   "history": {
     "enabled": false,
     "maxEntries": 1000,
+    "maxSizeBytes": 1048576,
     "retentionDays": 30
   },
   "transcription": {
@@ -39,10 +43,18 @@
     "maxTotalSizeBytes": 104857600,
     "retentionDays": 7
   },
+  "shellNotifications": {
+    "commandCompletedEnabled": false,
+    "longTaskEnabled": true,
+    "readyForInputEnabled": false,
+    "longTaskSeconds": 10
+  },
   "workbench": {
     "tabPosition": "Top",
     "confirmCloseRunning": true,
     "commandPaletteHotkeyEnabled": true,
-    "commandPaletteHotkey": "Ctrl+Shift+Space"
+    "commandPaletteHotkey": "Ctrl+Shift+Space",
+    "focusModeHotkeyEnabled": true,
+    "focusModeHotkey": "Ctrl+Shift+F11"
   }
 }

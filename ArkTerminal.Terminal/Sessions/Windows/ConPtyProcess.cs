@@ -31,6 +31,7 @@ internal sealed class ConPtyProcess : IDisposable
     internal SafeFileHandle InputWrite => _inputWrite;
     internal SafeFileHandle OutputRead => _outputRead;
     internal int ProcessId { get; private init; }
+    internal string? ExecutableName { get; private init; }
 
     internal static ConPtyProcess Start(SessionLaunchRequest request, int columns, int rows)
     {
@@ -132,11 +133,15 @@ internal sealed class ConPtyProcess : IDisposable
             process = new SafeProcessHandle(processInformation.Process, true);
             thread = new SafeThreadHandle(processInformation.Thread, true);
             Check(NativeMethods.AssignProcessToJobObject(job, process));
+            string? processName = null;
+            try { processName = Path.GetFileName(ArkTerminal.Terminal.Sessions.Elevation.ElevationProtocol.ProcessPath(process)); }
+            catch (Win32Exception) { } // Optional display metadata cannot prevent an otherwise valid launch.
             Check(NativeMethods.ResumeThread(thread) != uint.MaxValue);
 
             var started = new ConPtyProcess(pseudoConsole, inputWrite, outputRead, process, job)
             {
-                ProcessId = checked((int)processInformation.ProcessId)
+                ProcessId = checked((int)processInformation.ProcessId),
+                ExecutableName = processName
             };
             pseudoConsole = null;
             inputWrite = null;

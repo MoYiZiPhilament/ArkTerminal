@@ -2,6 +2,7 @@ namespace ArkTerminal.Terminal.Sessions;
 
 public sealed class TerminalSessionOptions
 {
+    public string? ElevationHostPath { get; init; }
     public int InitialColumns { get; init; } = 120;
     public int InitialRows { get; init; } = 30;
     public int ReadBufferSize { get; init; } = 16 * 1024;

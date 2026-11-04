@@ -12,6 +12,13 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.FirstOrDefault() == "--elevated-host")
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var result = await ArkTerminal.Terminal.Sessions.Elevation.ElevatedHost.RunAsync(e.Args);
+            Shutdown(result);
+            return;
+        }
         _singleInstance = new Mutex(true, @"Local\ArkTerminal.SingleInstance", out _ownsMutex);
         if (!_ownsMutex)
         {

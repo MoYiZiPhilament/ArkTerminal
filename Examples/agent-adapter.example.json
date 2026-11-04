@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "local-claude",
+  "displayName": "Local Claude recipe",
+  "executableCandidates": ["claude.exe", "claude.cmd", "claude.ps1"],
+  "versionProbe": {
+    "arguments": ["--version"],
+    "timeoutMilliseconds": 3000,
+    "maxOutputBytes": 65536
+  },
+  "launchTemplate": [],
+  "variables": ["model", "workingDirectory"],
+  "fields": {
+    "model": ["--model", "{{model}}"],
+    "permissionModes": {
+      "default": ["--permission-mode", "default"],
+      "plan": ["--permission-mode", "plan"]
+    },
+    "arguments": [
+      { "flag": "--continue", "takesValue": false, "repeatable": false, "allowedValues": [] },
+      { "flag": "--add-dir", "takesValue": true, "repeatable": true, "allowedValues": [] }
+    ]
+  },
+  "capabilities": {
+    "interactiveInput": true,
+    "resume": true,
+    "programmaticHandoff": false
+  },
+  "statusSignals": ["process"],
+  "evidence": "https://code.claude.com/docs/en/cli-reference"
+}

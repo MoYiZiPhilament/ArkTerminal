@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "profiles": [
     {
@@ -15,6 +15,7 @@
       "runAsAdministrator": false,
       "shellIntegration": "Disabled",
       "terminal": {
+        "useGlobalFont": true,
         "fontFamily": "Cascadia Mono",
         "fontSize": 14,
         "foregroundColor": "#CCCCCC",

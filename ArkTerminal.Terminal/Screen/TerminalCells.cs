@@ -9,6 +9,7 @@ internal readonly record struct TerminalStyle(
     bool Underline,
     bool Inverse)
 {
+    internal string? Hyperlink { get; init; }
     internal static TerminalStyle Default => new(TerminalColor.Default, TerminalColor.Default, false, false, false);
 }
 
@@ -52,10 +53,12 @@ internal sealed class TerminalLine
     internal long Id { get; } = Interlocked.Increment(ref _nextId);
     internal TerminalCell[] Cells { get; set; }
     internal bool IsSoftWrapped { get; set; }
+    internal long? LogicalLineNumber { get; set; }
+    internal DateTimeOffset? FirstOutputAtUtc { get; set; }
 
     internal TerminalLine Clone()
     {
-        var clone = new TerminalLine(Cells.Length) { IsSoftWrapped = IsSoftWrapped };
+        var clone = new TerminalLine(Cells.Length) { IsSoftWrapped = IsSoftWrapped, LogicalLineNumber = LogicalLineNumber, FirstOutputAtUtc = FirstOutputAtUtc };
         for (var index = 0; index < Cells.Length; index++)
         {
             clone.Cells[index] = Cells[index].Clone();

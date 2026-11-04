@@ -12,18 +12,33 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**" />
-        <EmbeddedResource Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**" />
-        <None Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**" />
-        <Page Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**" />
+        <Compile Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
+        <EmbeddedResource Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
+        <None Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
+        <Page Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="ArkTerminal.Core\ArkTerminal.Core.csproj" />
         <ProjectReference Include="ArkTerminal.Terminal\ArkTerminal.Terminal.csproj" />
+        <ProjectReference Include="ArkTerminal.Mcp\ArkTerminal.Mcp.csproj" ReferenceOutputAssembly="false" Private="false" />
         <PackageReference Include="Vortice.Direct2D1" Version="3.8.3" />
         <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
         <PackageReference Include="Vortice.Direct3D9" Version="3.8.3" />
     </ItemGroup>
+
+    <Target Name="CopyMcpBridge" AfterTargets="Build">
+        <ItemGroup><McpBridgeFiles Include="ArkTerminal.Mcp\bin\$(Configuration)\net10.0-windows\$(RuntimeIdentifier)\*" /></ItemGroup>
+        <Copy SourceFiles="@(McpBridgeFiles)" DestinationFolder="$(OutDir)Mcp" SkipUnchangedFiles="true" />
+    </Target>
+    <Target Name="PublishMcpBridge" AfterTargets="ComputeFilesToPublish">
+        <ItemGroup>
+            <McpPublishFiles Include="ArkTerminal.Mcp\bin\$(Configuration)\net10.0-windows\$(RuntimeIdentifier)\*" />
+            <ResolvedFileToPublish Include="@(McpPublishFiles)">
+                <RelativePath>Mcp\%(McpPublishFiles.Filename)%(McpPublishFiles.Extension)</RelativePath>
+                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            </ResolvedFileToPublish>
+        </ItemGroup>
+    </Target>
 
 </Project>

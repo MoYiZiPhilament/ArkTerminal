@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ArkTerminal.Core\ArkTerminal.Core.csproj" />
+    <EmbeddedResource Include="Integration\Scripts\*" />
   </ItemGroup>
 </Project>

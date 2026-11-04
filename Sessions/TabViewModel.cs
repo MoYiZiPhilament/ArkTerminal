@@ -24,10 +24,13 @@ public sealed class TabLaunchConfiguration
 {
     public required SessionLaunchRequest Request { get; init; }
     public required string ProfileName { get; init; }
+    public string Icon { get; init; } = string.Empty;
+    public bool WorkingDirectoryIsExplicit { get; init; } = true;
+    public bool IsTransientAgent { get; init; }
     public required TerminalFontOptions FontOptions { get; init; }
     public string WorkingDirectory => Request.WorkingDirectory;
 
-    public static TabLaunchConfiguration FromProfile(TerminalProfile profile, string workingDirectory, AppearanceSettings? appearance)
+    public static TabLaunchConfiguration FromProfile(TerminalProfile profile, string workingDirectory, AppearanceSettings? appearance, bool workingDirectoryIsExplicit = true, bool isTransientAgent = false)
     {
         var request = SessionLaunchRequest.FromProfile(profile);
         request = new SessionLaunchRequest
@@ -37,7 +40,7 @@ public sealed class TabLaunchConfiguration
             ExecutablePath = request.ExecutablePath,
             Arguments = request.Arguments,
             PostLaunchInput = request.PostLaunchInput,
-            WorkingDirectory = Path.GetFullPath(workingDirectory),
+            WorkingDirectory = Path.GetFullPath(Environment.ExpandEnvironmentVariables(workingDirectory)),
             Environment = request.Environment,
             ScrollbackLines = request.ScrollbackLines,
             RunAsAdministrator = request.RunAsAdministrator,
@@ -48,21 +51,19 @@ public sealed class TabLaunchConfiguration
         {
             Request = request,
             ProfileName = profile.Name,
-            FontOptions = new TerminalFontOptions
-            {
-                FontFamily = profile.Terminal.FontFamily,
-                FontSize = profile.Terminal.FontSize,
-                FontWeight = appearance?.TerminalFontWeight ?? 400,
-                LineHeightMultiplier = appearance?.TerminalLineHeight ?? 1.15,
-                CharacterSpacing = appearance?.TerminalCharacterSpacing ?? 0,
-                Ligatures = appearance?.TerminalLigatures ?? false
-            }
+            Icon = profile.Icon,
+            WorkingDirectoryIsExplicit = workingDirectoryIsExplicit,
+            IsTransientAgent = isTransientAgent,
+            FontOptions = TerminalFontOptions.Resolve(appearance, profile)
         };
     }
 
     public TabLaunchConfiguration Clone() => new()
     {
         ProfileName = ProfileName,
+        Icon = Icon,
+        WorkingDirectoryIsExplicit = WorkingDirectoryIsExplicit,
+        IsTransientAgent = IsTransientAgent,
         FontOptions = FontOptions,
         Request = new SessionLaunchRequest
         {
@@ -76,7 +77,7 @@ public sealed class TabLaunchConfiguration
             ScrollbackLines = Request.ScrollbackLines,
             RunAsAdministrator = Request.RunAsAdministrator,
             ShellIntegration = Request.ShellIntegration,
-            AgentRecipe = Request.AgentRecipe
+            AgentRecipe = Request.AgentRecipe?.DeepClone()
         }
     };
 }
@@ -101,17 +102,20 @@ public sealed class TabViewModel : INotifyPropertyChanged
     public Guid TabId { get; } = Guid.NewGuid();
     public bool IsNewPage { get; }
     public bool IsRecoveredPlaceholder { get; init; }
-    public TabLaunchConfiguration? Launch { get; }
+    public TabLaunchConfiguration? Launch { get; internal set; }
     public ConPtySession? Session { get; internal set; }
     public long SessionGeneration { get; internal set; }
+    public string AgentBackendDescription { get; internal set; } = string.Empty;
     internal SemaphoreSlim OperationGate { get; } = new(1, 1);
     public int ScrollbackOffset { get; set; }
     public string SearchQuery { get; set; } = string.Empty;
     public double? ZoomFontSize { get; set; }
     public string ProfileName => Launch?.ProfileName ?? "新建";
+    public string Icon => Launch?.Icon ?? string.Empty;
     public string WorkingDirectory => Launch?.WorkingDirectory ?? string.Empty;
     public string ToolTipText => $"{Title}\n{StatusText}\n{ProfileName}\n{WorkingDirectory}";
     public string Title => _fixedTitle is not null ? _fixedTitle :
+        Launch?.Request.AgentRecipe is not null ? ProfileName :
         !string.IsNullOrWhiteSpace(_shellTitle) ? _shellTitle :
         !string.IsNullOrWhiteSpace(_trustedForegroundProcess) ? _trustedForegroundProcess : ProfileName;
     public string? FixedTitle { get => _fixedTitle; set { _fixedTitle = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } }
@@ -139,6 +143,7 @@ public sealed class TabViewModel : INotifyPropertyChanged
         Title = FixedTitle ?? string.Empty,
         ProfileId = Launch!.Request.ProfileId,
         WorkingDirectory = Launch.WorkingDirectory,
+        WorkingDirectoryIsExplicit = Launch.WorkingDirectoryIsExplicit,
         WorkspaceId = Launch.Request.WorkspaceId,
         Order = order
     };

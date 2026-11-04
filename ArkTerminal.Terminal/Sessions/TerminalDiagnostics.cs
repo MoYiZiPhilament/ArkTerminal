@@ -11,6 +11,9 @@ public sealed class TerminalDiagnosticSnapshot
     public long InputBytesWritten { get; init; }
     public bool ReadWorkerActive { get; init; }
     public bool WriteWorkerActive { get; init; }
+    public int InputQueueDepth { get; init; }
+    public int InputQueueCapacity { get; init; }
+    public bool ResizePending { get; init; }
 }
 
 internal sealed class TerminalDiagnostics
@@ -35,8 +38,11 @@ internal sealed class TerminalDiagnostics
     internal void SetReadWorker(bool active) => Interlocked.Exchange(ref _readWorkerActive, active ? 1 : 0);
     internal void SetWriteWorker(bool active) => Interlocked.Exchange(ref _writeWorkerActive, active ? 1 : 0);
 
-    public TerminalDiagnosticSnapshot Snapshot() => new()
+    public TerminalDiagnosticSnapshot Snapshot(int queueDepth = 0, int queueCapacity = 0, bool resizePending = false) => new()
     {
+        InputQueueDepth = queueDepth,
+        InputQueueCapacity = queueCapacity,
+        ResizePending = resizePending,
         BytesRead = Interlocked.Read(ref _bytesRead),
         ReplacementCharacters = Interlocked.Read(ref _replacementCharacters),
         IgnoredSequences = Interlocked.Read(ref _ignoredSequences),

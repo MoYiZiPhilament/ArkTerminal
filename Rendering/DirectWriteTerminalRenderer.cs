@@ -38,7 +38,8 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
         string composition,
         TerminalSelection? selection,
         IReadOnlyList<TerminalSearchMatch> searchMatches,
-        TerminalVisualStyle visualStyle)
+        TerminalVisualStyle visualStyle,
+        Vector2? cursorGridPosition = null)
     {
         EnsureTarget(target);
         EnsureStyleBrushes(visualStyle);
@@ -78,8 +79,8 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
 
         if (snapshot.CursorVisible)
         {
-            var cursorX = (float)(snapshot.CursorColumn * fonts.CellWidth);
-            var cursorY = (float)(snapshot.CursorRow * fonts.LineHeight);
+            var cursorX = (cursorGridPosition?.X ?? snapshot.CursorColumn) * (float)fonts.CellWidth;
+            var cursorY = (cursorGridPosition?.Y ?? snapshot.CursorRow) * (float)fonts.LineHeight;
             target.DrawRectangle(new Rect(cursorX + 1, cursorY + 1, (float)Math.Max(3, fonts.CellWidth - 2), (float)(fonts.LineHeight - 2)), _cursorBrush!, 1);
         }
 
@@ -89,9 +90,11 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
             var layout = fonts.GetLayout(composition, false, columns);
             var defaultForeground = TerminalColor.FromRgb(visualStyle.Foreground.R, visualStyle.Foreground.G, visualStyle.Foreground.B);
             var brush = GetBrush(target, TerminalColor.Default, defaultForeground);
-            var origin = new Vector2(
-                (float)(snapshot.CursorColumn * fonts.CellWidth),
-                (float)(snapshot.CursorRow * fonts.LineHeight));
+            var origin = SnapToPixel(
+                target,
+                new Vector2(
+                    (float)(snapshot.CursorColumn * fonts.CellWidth),
+                    (float)(snapshot.CursorRow * fonts.LineHeight)));
             target.DrawTextLayout(origin, layout, brush, DrawTextOptions.EnableColorFont | DrawTextOptions.Clip);
             target.DrawLine(
                 origin with { Y = origin.Y + (float)fonts.LineHeight - 2 },
@@ -121,38 +124,73 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
 
     private void DrawLine(ID2D1RenderTarget target, TerminalLineSnapshot line, TerminalFontService fonts, float y, TerminalVisualStyle visualStyle)
     {
-        var groups = fonts.Options.Ligatures ? CreateLigatureGroups(line.Clusters) : CreateClusterGroups(line.Clusters);
+        var groups = (fonts.Options.Ligatures ? CreateLigatureGroups(line.Clusters) : CreateClusterGroups(line.Clusters)).ToArray();
         var defaultBackground = TerminalColor.FromRgb(visualStyle.Background.R, visualStyle.Background.G, visualStyle.Background.B);
         var defaultForeground = TerminalColor.FromRgb(visualStyle.Foreground.R, visualStyle.Foreground.G, visualStyle.Foreground.B);
+
+        // Adjacent cells commonly repeat one SGR background. Fill each color run once so
+        // fractional cell widths cannot leave antialiased vertical seams in selected rows.
+        for (var index = 0; index < groups.Length;)
+        {
+            var group = groups[index];
+            var background = EffectiveBackground(group);
+            if (background.Kind == TerminalColorKind.Default)
+            {
+                index++;
+                continue;
+            }
+            var start = group.StartColumn;
+            var end = start + group.Columns;
+            var next = index + 1;
+            while (next < groups.Length && groups[next].StartColumn == end && EffectiveBackground(groups[next]) == background)
+            {
+                end += groups[next].Columns;
+                next++;
+            }
+            var rect = new Rect((float)(start * fonts.CellWidth), y, (float)((end - start) * fonts.CellWidth), (float)fonts.LineHeight);
+            FillRectangleAliased(target, rect, GetBrush(target, background, defaultBackground));
+            index = next;
+        }
+
         foreach (var group in groups)
         {
+            if (string.IsNullOrWhiteSpace(group.Text)) continue;
             var foreground = group.Inverse ? group.Background : group.Foreground;
-            var background = group.Inverse ? group.Foreground : group.Background;
             var x = (float)(group.StartColumn * fonts.CellWidth);
             var width = (float)(group.Columns * fonts.CellWidth);
             var rect = new Rect(x, y, width, (float)fonts.LineHeight);
-            if (background.Kind != TerminalColorKind.Default)
-            {
-                target.FillRectangle(rect, GetBrush(target, background, defaultBackground));
-            }
-            if (string.IsNullOrWhiteSpace(group.Text))
-            {
-                continue;
-            }
-
-            var layout = fonts.GetLayout(group.Text, group.Bold, group.Columns);
             var brush = GetBrush(target, foreground, defaultForeground);
-            target.PushAxisAlignedClip(rect, AntialiasMode.PerPrimitive);
-            target.DrawTextLayout(
-                new Vector2(x, y),
-                layout,
-                brush,
-                DrawTextOptions.EnableColorFont | DrawTextOptions.Clip);
-            target.PopAxisAlignedClip();
+            if (!TerminalGridGlyphRenderer.TryDraw(target, group.Text, rect, brush))
+            {
+                var layout = fonts.GetLayout(group.Text, group.Bold, group.Columns);
+                target.PushAxisAlignedClip(rect, AntialiasMode.PerPrimitive);
+                target.DrawTextLayout(
+                    SnapToPixel(target, new Vector2(x, y)),
+                    layout,
+                    brush,
+                    DrawTextOptions.EnableColorFont | DrawTextOptions.Clip);
+                target.PopAxisAlignedClip();
+            }
             if (group.Underline)
             {
                 target.DrawLine(new Vector2(x, y + (float)fonts.LineHeight - 2), new Vector2(x + width, y + (float)fonts.LineHeight - 2), brush, 1);
             }
+        }
+    }
+
+    private static TerminalColor EffectiveBackground(TextGroup group) => group.Inverse ? group.Foreground : group.Background;
+
+    private static void FillRectangleAliased(ID2D1RenderTarget target, Rect rect, ID2D1SolidColorBrush brush)
+    {
+        var previousMode = target.AntialiasMode;
+        target.AntialiasMode = AntialiasMode.Aliased;
+        try
+        {
+            target.FillRectangle(TerminalGridGlyphRenderer.SnapToDevicePixels(target, rect), brush);
+        }
+        finally
+        {
+            target.AntialiasMode = previousMode;
         }
     }
 
@@ -204,6 +242,21 @@ public sealed class DirectWriteTerminalRenderer : IDisposable
         }
         ClearBrushes();
         _target = target;
+        // The shared texture has an alpha channel; grayscale avoids ClearType color fringes
+        // and matches the glyph appearance used by native terminal renderers such as otty.
+        target.TextAntialiasMode = TextAntialiasMode.Grayscale;
+    }
+
+    private static Vector2 SnapToPixel(ID2D1RenderTarget target, Vector2 origin)
+    {
+        var scale = target.Dpi.Width / 96f;
+        if (scale <= 0)
+        {
+            return origin;
+        }
+        return new Vector2(
+            MathF.Round(origin.X * scale) / scale,
+            MathF.Round(origin.Y * scale) / scale);
     }
 
     private void EnsureStyleBrushes(TerminalVisualStyle style)

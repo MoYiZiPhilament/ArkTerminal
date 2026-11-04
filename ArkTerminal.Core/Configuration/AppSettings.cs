@@ -8,6 +8,7 @@ public sealed class AppSettings
     public HistoryPolicy History { get; set; } = new();
     public TranscriptionPolicy Transcription { get; set; } = new();
     public WorkbenchSettings Workbench { get; set; } = new();
+    public ShellNotificationSettings ShellNotifications { get; set; } = new();
 
     public AppSettings DeepClone() => new()
     {
@@ -16,7 +17,8 @@ public sealed class AppSettings
         Appearance = Appearance.DeepClone(),
         History = History.DeepClone(),
         Transcription = Transcription.DeepClone(),
-        Workbench = Workbench.DeepClone()
+        Workbench = Workbench.DeepClone(),
+        ShellNotifications = ShellNotifications.DeepClone()
     };
 }
 
@@ -33,6 +35,8 @@ public sealed class WorkbenchSettings
     public bool ConfirmCloseRunning { get; set; } = true;
     public bool CommandPaletteHotkeyEnabled { get; set; } = true;
     public string CommandPaletteHotkey { get; set; } = "Ctrl+Shift+Space";
+    public bool FocusModeHotkeyEnabled { get; set; } = true;
+    public string FocusModeHotkey { get; set; } = "Ctrl+Shift+F11";
 
     public WorkbenchSettings DeepClone() => (WorkbenchSettings)MemberwiseClone();
 }
@@ -47,6 +51,9 @@ public sealed class AppearanceSettings
     public double TerminalLineHeight { get; set; } = 1.15;
     public double TerminalCharacterSpacing { get; set; }
     public bool TerminalLigatures { get; set; }
+    public bool ShowTimestamps { get; set; }
+    public bool ShowLogicalLineNumbers { get; set; }
+    public bool ShowCommandDuration { get; set; }
     public string AccentColor { get; set; } = "#4688F1";
     public VisualSettings Visual { get; set; } = new();
 
@@ -135,9 +142,19 @@ public sealed class HistoryPolicy
 {
     public bool Enabled { get; set; }
     public int MaxEntries { get; set; } = 1000;
+    public int MaxSizeBytes { get; set; } = 1024 * 1024;
     public int RetentionDays { get; set; } = 30;
 
     public HistoryPolicy DeepClone() => (HistoryPolicy)MemberwiseClone();
+}
+
+public sealed class ShellNotificationSettings
+{
+    public bool CommandCompletedEnabled { get; set; }
+    public bool LongTaskEnabled { get; set; } = true;
+    public bool ReadyForInputEnabled { get; set; }
+    public int LongTaskSeconds { get; set; } = 10;
+    public ShellNotificationSettings DeepClone() => (ShellNotificationSettings)MemberwiseClone();
 }
 
 public sealed class TranscriptionPolicy

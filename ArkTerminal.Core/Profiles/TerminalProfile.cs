@@ -20,15 +20,26 @@ public sealed class AgentLaunchRecipe
     public List<string> Arguments { get; set; } = [];
     public string WorkingDirectory { get; set; } = "{{home}}";
     public AgentShellBackend ShellBackend { get; set; } = AgentShellBackend.PowerShell7;
+
+    public AgentLaunchRecipe DeepClone()
+    {
+        var clone = (AgentLaunchRecipe)MemberwiseClone();
+        clone.Arguments = [.. Arguments];
+        return clone;
+    }
 }
 
 public sealed class ProfileTerminalSettings
 {
+    // Missing in older schema-1 documents: preserve the existing font override.
+    public bool UseGlobalFont { get; set; }
     public string FontFamily { get; set; } = "Cascadia Mono";
     public double FontSize { get; set; } = 14;
     public string ForegroundColor { get; set; } = "#CCCCCC";
     public string BackgroundColor { get; set; } = "#1E1E1E";
     public int ScrollbackLines { get; set; } = 5000;
+
+    public ProfileTerminalSettings DeepClone() => (ProfileTerminalSettings)MemberwiseClone();
 }
 
 public sealed class TerminalProfile
@@ -45,12 +56,24 @@ public sealed class TerminalProfile
     public ShellIntegrationMode ShellIntegration { get; set; } = ShellIntegrationMode.Disabled;
     public ProfileTerminalSettings Terminal { get; set; } = new();
     public AgentLaunchRecipe? AgentRecipe { get; set; }
+
+    public TerminalProfile DeepClone()
+    {
+        var clone = (TerminalProfile)MemberwiseClone();
+        clone.Arguments = [.. Arguments];
+        clone.Environment = new(Environment, StringComparer.OrdinalIgnoreCase);
+        clone.Terminal = Terminal.DeepClone();
+        clone.AgentRecipe = AgentRecipe?.DeepClone();
+        return clone;
+    }
 }
 
 public sealed class ProfileCatalog
 {
     public int SchemaVersion { get; set; } = Configuration.ConfigurationDefaults.CurrentSchemaVersion;
     public List<TerminalProfile> Profiles { get; set; } = [];
+
+    public ProfileCatalog DeepClone() => new() { SchemaVersion = SchemaVersion, Profiles = Profiles.Select(profile => profile.DeepClone()).ToList() };
 }
 
 public static class ProfileDefaults
@@ -65,7 +88,8 @@ public static class ProfileDefaults
                 Name = "Command Prompt",
                 ExecutablePath = "cmd.exe",
                 Arguments = ["/d"],
-                WorkingDirectory = "{{home}}"
+                WorkingDirectory = "{{home}}",
+                Terminal = new() { UseGlobalFont = true }
             },
             new TerminalProfile
             {
@@ -73,7 +97,8 @@ public static class ProfileDefaults
                 Name = "Windows PowerShell 5",
                 ExecutablePath = @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe",
                 Arguments = ["-NoLogo"],
-                WorkingDirectory = "{{home}}"
+                WorkingDirectory = "{{home}}",
+                Terminal = new() { UseGlobalFont = true }
             },
             new TerminalProfile
             {
@@ -81,7 +106,8 @@ public static class ProfileDefaults
                 Name = "PowerShell 7",
                 ExecutablePath = "pwsh.exe",
                 Arguments = ["-NoLogo"],
-                WorkingDirectory = "{{home}}"
+                WorkingDirectory = "{{home}}",
+                Terminal = new() { UseGlobalFont = true }
             },
             new TerminalProfile
             {
@@ -89,7 +115,8 @@ public static class ProfileDefaults
                 Name = "Git Bash",
                 ExecutablePath = @"%ProgramFiles%\Git\bin\bash.exe",
                 Arguments = ["--login", "-i"],
-                WorkingDirectory = "{{home}}"
+                WorkingDirectory = "{{home}}",
+                Terminal = new() { UseGlobalFont = true }
             }
         ]
     };

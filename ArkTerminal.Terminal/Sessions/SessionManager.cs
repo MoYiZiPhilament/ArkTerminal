@@ -26,12 +26,15 @@ public sealed class SessionManager : ISessionManager
         }
     }
 
+    public event Action<ConPtySession>? SessionCreated;
+
     public async Task<ISession> CreateAsync(SessionLaunchRequest request, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ShellLaunchAdapter.Validate(request);
         var options = new TerminalSessionOptions
         {
+            ElevationHostPath = _options.ElevationHostPath,
             InitialColumns = _options.InitialColumns,
             InitialRows = _options.InitialRows,
             ReadBufferSize = _options.ReadBufferSize,
@@ -54,6 +57,7 @@ public sealed class SessionManager : ISessionManager
 
         try
         {
+            SessionCreated?.Invoke(session);
             await session.StartAsync(request, cancellationToken).ConfigureAwait(false);
             return session;
         }

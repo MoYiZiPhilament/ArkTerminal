@@ -15,14 +15,18 @@ public interface IAppDataPaths
     string ProfilesFile { get; }
     string RecentProjectsFile { get; }
     string SettingsDraftFile { get; }
+    string ProfilesDraftFile { get; }
     string RecoveryStateFile { get; }
     string ExitMarkerFile { get; }
     string BackupDirectory { get; }
     string BackgroundsDirectory { get; }
     string DiagnosticsDirectory { get; }
     string AdaptersDirectory { get; }
+    string AgentPreferencesFile { get; }
+    string AgentDetectionCacheFile { get; }
     string HistoryDirectory { get; }
     string SessionSavesDirectory { get; }
+    string SnapshotsDirectory { get; }
 }
 
 public interface IPackagingContext

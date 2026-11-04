@@ -6,8 +6,9 @@ internal sealed class IncrementalTextElementSegmenter
 {
     private const int MaxPendingUtf16Length = 256;
     private string _pending = string.Empty;
+    private int _publishedLength;
 
-    internal void Write(string text, bool flush, Action<string> emit)
+    internal void Write(string text, bool flush, Action<string> emit, Action<string, string> update)
     {
         _pending += text;
         var offset = 0;
@@ -15,11 +16,22 @@ internal sealed class IncrementalTextElementSegmenter
         {
             var length = StringInfo.GetNextTextElementLength(_pending, offset);
             var isLast = offset + length == _pending.Length;
-            if (!flush && isLast && _pending.Length <= MaxPendingUtf16Length)
+            var element = _pending.Substring(offset, length);
+            if (_publishedLength > 0)
             {
+                if (length != _publishedLength) update(_pending[.._publishedLength], element);
+                _publishedLength = 0;
+            }
+            else
+            {
+                emit(element);
+            }
+            if (!flush && isLast && length <= MaxPendingUtf16Length)
+            {
+                // Display the tail now, but retain it so later code points update the same cluster.
+                _publishedLength = length;
                 break;
             }
-            emit(_pending.Substring(offset, length));
             offset += length;
         }
         _pending = offset == 0 ? _pending : _pending[offset..];

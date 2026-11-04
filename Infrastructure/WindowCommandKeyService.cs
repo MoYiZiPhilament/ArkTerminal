@@ -7,10 +7,18 @@ public sealed class WindowCommandKeyService : IDisposable
 {
     private const int WmKeyDown = 0x0100;
     private const int WmSysKeyDown = 0x0104;
-    private const int VkSpace = 0x20;
-    private const int VkF11 = 0x7A;
     private HwndSource? _source;
     private long _lastFocusInvocation = -250;
+    private ArkTerminal.Core.Configuration.WorkbenchSettings _settings = new();
+    private bool _paletteRegistered;
+    private bool _focusRegistered;
+
+    public void Configure(ArkTerminal.Core.Configuration.WorkbenchSettings settings, bool paletteRegistered, bool focusRegistered)
+    {
+        _settings = settings.DeepClone();
+        _paletteRegistered = paletteRegistered;
+        _focusRegistered = focusRegistered;
+    }
 
     public event Action? CommandPaletteRequested;
     public event Action? FocusModeRequested;
@@ -36,15 +44,15 @@ public sealed class WindowCommandKeyService : IDisposable
         var control = (GetKeyState(0x11) & 0x8000) != 0;
         var shift = (GetKeyState(0x10) & 0x8000) != 0;
         var alt = (GetKeyState(0x12) & 0x8000) != 0;
-        if (!control || !shift || alt)
-        {
-            return IntPtr.Zero;
-        }
-        if (wParam.ToInt32() == VkSpace)
+        var win = (GetKeyState(0x5B) & 0x8000) != 0 || (GetKeyState(0x5C) & 0x8000) != 0;
+        var modifiers = (control ? 2u : 0u) | (shift ? 4u : 0u) | (alt ? 1u : 0u) | (win ? 8u : 0u);
+        GlobalHotkeyService.TryParse(_settings.CommandPaletteHotkey, out var pm, out var pk);
+        GlobalHotkeyService.TryParse(_settings.FocusModeHotkey, out var fm, out var fk);
+        if (_settings.CommandPaletteHotkeyEnabled && !_paletteRegistered && modifiers == pm && (uint)wParam.ToInt32() == pk)
         {
             CommandPaletteRequested?.Invoke();
         }
-        else if (wParam.ToInt32() == VkF11)
+        else if (_settings.FocusModeHotkeyEnabled && !_focusRegistered && modifiers == fm && (uint)wParam.ToInt32() == fk)
         {
             RequestFocusMode();
         }

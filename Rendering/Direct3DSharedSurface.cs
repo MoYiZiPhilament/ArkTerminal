@@ -17,6 +17,7 @@ namespace ArkTerminal.Rendering;
 
 public sealed class Direct3DSharedSurface : IDisposable
 {
+    public long EstimatedSharedTextureBytes => _texture11 is null ? 0 : (long)_pixelWidth * _pixelHeight * 4;
     private readonly D3DImage _image;
     private ID3D11Device? _device11;
     private ID2D1Factory? _factory2D;
@@ -51,13 +52,19 @@ public sealed class Direct3DSharedSurface : IDisposable
     public int PixelWidth => _pixelWidth;
     public int PixelHeight => _pixelHeight;
     public bool IsAvailable => _image.IsFrontBufferAvailable && !_disposed;
+    internal bool LastRenderWasBusy { get; private set; }
 
     public async Task<bool> RenderAsync(float dpi, Action<ID2D1RenderTarget> draw, Int32Rect? dirtyRect = null, Func<bool>? isCurrent = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_rendering || !_image.IsFrontBufferAvailable || _pixelWidth <= 0 || _pixelHeight <= 0 ||
-            !TryLockImage())
+        LastRenderWasBusy = _rendering;
+        if (_rendering || !_image.IsFrontBufferAvailable || _pixelWidth <= 0 || _pixelHeight <= 0)
         {
+            return false;
+        }
+        if (!TryLockImage())
+        {
+            LastRenderWasBusy = true;
             return false;
         }
 

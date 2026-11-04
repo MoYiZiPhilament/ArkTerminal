@@ -37,6 +37,7 @@ public sealed class DocumentSaveResult
     public required DocumentSaveStatus Status { get; init; }
     public string? Revision { get; init; }
     public string? Error { get; init; }
+    public string? Warning { get; init; }
     public ValidationResult? Validation { get; init; }
     public bool Success => Status == DocumentSaveStatus.Success;
 }

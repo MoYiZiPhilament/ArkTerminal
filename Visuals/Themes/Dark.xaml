@@ -1,21 +1,23 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="Theme.TerminalBackground">#1E1E1E</Color>
-    <Color x:Key="Theme.TerminalForeground">#DCDCDC</Color>
-    <Color x:Key="Theme.TerminalSelection">#365880</Color>
-    <Color x:Key="Theme.TerminalSearch">#6E5F28</Color>
-    <Color x:Key="Theme.TerminalCursor">#DCDCDC</Color>
-    <SolidColorBrush x:Key="Theme.WindowBackground" Color="#17191D"/>
-    <SolidColorBrush x:Key="Theme.SurfaceBackground" Color="#202329"/>
-    <SolidColorBrush x:Key="Theme.CardBackground" Color="#25292F"/>
-    <SolidColorBrush x:Key="Theme.PrimaryText" Color="#EEF1F5"/>
-    <SolidColorBrush x:Key="Theme.SecondaryText" Color="#ABB4C0"/>
-    <SolidColorBrush x:Key="Theme.BorderBrush" Color="#48515D"/>
-    <SolidColorBrush x:Key="Theme.ActiveTabBackground" Color="#30485F"/>
-    <SolidColorBrush x:Key="Theme.HoverBackground" Color="#30363F"/>
-    <SolidColorBrush x:Key="Theme.ErrorBackground" Color="#41292D"/>
-    <SolidColorBrush x:Key="Theme.ErrorBorder" Color="#D56A72"/>
-    <SolidColorBrush x:Key="Theme.RecoveryBackground" Color="#263446"/>
-    <SolidColorBrush x:Key="Theme.RecoveryBorder" Color="#668CB8"/>
-    <SolidColorBrush x:Key="Theme.OverlayBackground" Color="#24282E"/>
+    <Color x:Key="Theme.TerminalBackground">#191722</Color>
+    <Color x:Key="Theme.TerminalForeground">#E2DFEF</Color>
+    <Color x:Key="Theme.TerminalSelection">#45405F</Color>
+    <Color x:Key="Theme.TerminalSearch">#67562E</Color>
+    <Color x:Key="Theme.TerminalCursor">#DDD7EF</Color>
+    <SolidColorBrush x:Key="Theme.WindowBackground" Color="#22202C"/>
+    <SolidColorBrush x:Key="Theme.SurfaceBackground" Color="#262430"/>
+    <SolidColorBrush x:Key="Theme.CardBackground" Color="#2C2937"/>
+    <SolidColorBrush x:Key="Theme.InputBackground" Color="#211E2B"/>
+    <SolidColorBrush x:Key="Theme.SidebarBackground" Color="#292632"/>
+    <SolidColorBrush x:Key="Theme.PrimaryText" Color="#E9E5F3"/>
+    <SolidColorBrush x:Key="Theme.SecondaryText" Color="#ADA7BC"/>
+    <SolidColorBrush x:Key="Theme.BorderBrush" Color="#22C1B8D6"/>
+    <SolidColorBrush x:Key="Theme.ActiveTabBackground" Color="#1C1926"/>
+    <SolidColorBrush x:Key="Theme.HoverBackground" Color="#383442"/>
+    <SolidColorBrush x:Key="Theme.ErrorBackground" Color="#39242E"/>
+    <SolidColorBrush x:Key="Theme.ErrorBorder" Color="#F08B9B"/>
+    <SolidColorBrush x:Key="Theme.RecoveryBackground" Color="#292E42"/>
+    <SolidColorBrush x:Key="Theme.RecoveryBorder" Color="#7D99D3"/>
+    <SolidColorBrush x:Key="Theme.OverlayBackground" Color="#2C2937"/>
 </ResourceDictionary>

@@ -43,7 +43,7 @@ public sealed class SessionLaunchRequest
             ScrollbackLines = profile.Terminal.ScrollbackLines,
             RunAsAdministrator = profile.RunAsAdministrator,
             ShellIntegration = profile.ShellIntegration,
-            AgentRecipe = profile.AgentRecipe
+            AgentRecipe = profile.AgentRecipe?.DeepClone()
         };
     }
 }

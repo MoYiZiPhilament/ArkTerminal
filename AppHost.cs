@@ -1,5 +1,6 @@
 using ArkTerminal.Core.Configuration;
 using ArkTerminal.Core.Data;
+using ArkTerminal.Core.Diagnostics;
 using ArkTerminal.Core.Profiles;
 using ArkTerminal.Core.Recovery;
 using ArkTerminal.Core.Storage;
@@ -14,7 +15,7 @@ public sealed class AppDataInitializationException : Exception
     public string? ErrorPath { get; }
 }
 
-public sealed class AppHost : IAsyncDisposable
+public sealed partial class AppHost : IAsyncDisposable
 {
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SemaphoreSlim _draftGate = new(1, 1);
@@ -32,6 +33,8 @@ public sealed class AppHost : IAsyncDisposable
     public StorageOptions StorageOptions { get; } = new();
     public ISessionManager Sessions => _sessionManager;
     public IAppDataPaths Paths { get; private set; } = null!;
+    public DiagnosticService Diagnostics { get; private set; } = null!;
+    public ArkTerminal.Terminal.Mcp.ReadOnlyMcpHost? ReadOnlyMcp { get; internal set; }
     public AppSettings? FormalSettings { get; private set; }
     public ProfileCatalog? Catalog { get; private set; }
     public RecentProjectsDocument RecentProjects { get; private set; } = new();
@@ -58,9 +61,13 @@ public sealed class AppHost : IAsyncDisposable
         }
 
         Paths = dataPaths.Paths!;
+        Diagnostics = new DiagnosticService(Paths);
+        InitializeShellData();
+        await InitializeAgentsAsync();
         _profileService = new ProfileService(Paths, StorageOptions);
         _settingsService = new SettingsService(Paths, StorageOptions);
         _draftService = new SettingsDraftService(Paths, StorageOptions);
+        _profilesDraftService = new ProfilesDraftService(Paths, StorageOptions);
         _recoveryService = new RecoveryStateService(Paths, _draftService, StorageOptions);
         _recentProjectsService = new RecentProjectsService(Paths, StorageOptions);
 
@@ -85,6 +92,7 @@ public sealed class AppHost : IAsyncDisposable
         else
         {
             StartupIssues.Add(profiles.Error ?? "Profile 加载失败。");
+            Diagnostics.Record(DiagnosticComponent.Profiles, DiagnosticEventKind.ReadFailed, (int)profiles.Status);
         }
 
         var profileIds = Catalog?.Profiles.Select(profile => profile.Id).ToArray();
@@ -98,6 +106,7 @@ public sealed class AppHost : IAsyncDisposable
         else
         {
             StartupIssues.Add(settings.Error ?? "设置加载失败。");
+            Diagnostics.Record(DiagnosticComponent.Configuration, DiagnosticEventKind.ReadFailed, (int)settings.Status);
         }
 
         var recovery = await _recoveryService.LoadForStartupAsync(_lifetime.Token);
@@ -125,8 +134,12 @@ public sealed class AppHost : IAsyncDisposable
             var validation = ConfigurationValidator.ValidateSettings(recovery.Draft.Value?.Settings, profileIds);
             if (validation.IsValid)
             {
-                _recoveredDraft = recovery.Draft.Value;
-                _recoveredDraftRevision = recovery.Draft.Revision;
+                if (!(recovery.Draft.Value!.CommitRequested && SameDocument(recovery.Draft.Value.Settings, FormalSettings)))
+                {
+                    _recoveredDraft = recovery.Draft.Value;
+                    _recoveredDraftRevision = recovery.Draft.Revision;
+                }
+                else await _draftService.DeleteAsync(_lifetime.Token);
             }
             else
             {
@@ -138,7 +151,20 @@ public sealed class AppHost : IAsyncDisposable
             StartupIssues.Add(recovery.Draft.Error ?? "设置草稿加载失败。");
         }
 
-        RecoveryAvailable = _recoveredDraft is not null || Recovery?.Tabs.Count > 0;
+        if (recovery.ProfilesDraft?.Success == true)
+        {
+            var candidate = recovery.ProfilesDraft.Value!;
+            if (!(candidate.CommitRequested && SameDocument(candidate.Catalog, Catalog)))
+            {
+                _recoveredProfilesDraft = candidate;
+                _recoveredProfilesDraftRevision = recovery.ProfilesDraft.Revision;
+            }
+            else await _profilesDraftService.DeleteAsync(_lifetime.Token);
+        }
+        else if (recovery.ProfilesDraft is not null && recovery.ProfilesDraft.Status != DocumentLoadStatus.NotFound)
+            StartupIssues.Add(recovery.ProfilesDraft.Error ?? "Profile 草稿加载失败。");
+        RecoveryAvailable = _recoveredDraft is not null || _recoveredProfilesDraft is not null || Recovery?.Tabs.Count > 0;
+        StartRecordingMaintenance();
     }
 
     public async Task<DocumentSaveResult> BeginDraftAsync()
@@ -169,6 +195,7 @@ public sealed class AppHost : IAsyncDisposable
             throw new InvalidOperationException("尚未开始草稿编辑。");
         }
         Draft.Settings = settings;
+        Draft.CommitRequested = false;
     }
 
     public async Task<DocumentSaveResult> PersistDraftAsync()
@@ -209,17 +236,27 @@ public sealed class AppHost : IAsyncDisposable
         await _draftGate.WaitAsync();
         try
         {
+            var committing = Draft.Settings.DeepClone();
+            Draft.CommitRequested = true;
+            var intent = await _draftService.SaveAsync(Draft, DraftRevision, _lifetime.Token);
+            if (!intent.Success) return intent;
+            DraftRevision = intent.Revision!;
             var profileIds = Catalog.Profiles.Select(profile => profile.Id).ToArray();
-            var saved = await _settingsService.SaveAsync(Draft.Settings, profileIds, Draft.BaseRevision, _lifetime.Token);
+            var saved = await _settingsService.SaveAsync(committing, profileIds, Draft.BaseRevision, _lifetime.Token);
             if (!saved.Success)
             {
                 return saved;
             }
 
-            FormalSettings = Draft.Settings.DeepClone();
+            FormalSettings = committing;
             SettingsRevision = saved.Revision!;
             Draft.BaseRevision = saved.Revision!;
-            return await DeleteDraftAndClearReferenceAsync();
+            var cleanup = await DeleteDraftAndClearReferenceAsync();
+            Draft = null;
+            DraftRevision = string.Empty;
+            _recoveredDraft = null;
+            return new DocumentSaveResult { Status = DocumentSaveStatus.Success, Revision = saved.Revision,
+                Warning = cleanup.Success ? null : "正式设置已保存；恢复草稿清理失败，可重试清理。" };
         }
         finally
         {
@@ -248,6 +285,11 @@ public sealed class AppHost : IAsyncDisposable
             Draft = _recoveredDraft;
             DraftRevision = _recoveredDraftRevision!;
         }
+        if (_recoveredProfilesDraft is not null && ProfilesDraft is null)
+        {
+            ProfilesDraft = _recoveredProfilesDraft;
+            ProfilesDraftRevision = _recoveredProfilesDraftRevision!;
+        }
         return Task.CompletedTask;
     }
 
@@ -265,6 +307,10 @@ public sealed class AppHost : IAsyncDisposable
         RecoveryRevision = string.Empty;
         _recoveredDraft = null;
         _recoveredDraftRevision = null;
+        _recoveredProfilesDraft = null;
+        _recoveredProfilesDraftRevision = null;
+        ProfilesDraft = null;
+        ProfilesDraftRevision = string.Empty;
         if (Draft is not null)
         {
             Draft = null;
@@ -285,6 +331,7 @@ public sealed class AppHost : IAsyncDisposable
                 Title = tab.Title,
                 ProfileId = tab.ProfileId,
                 WorkingDirectory = tab.WorkingDirectory,
+                WorkingDirectoryIsExplicit = tab.WorkingDirectoryIsExplicit,
                 WorkspaceId = tab.WorkspaceId,
                 Order = tab.Order
             }).ToList();
@@ -355,7 +402,7 @@ public sealed class AppHost : IAsyncDisposable
         {
             return new DocumentSaveResult { Status = DocumentSaveStatus.Success };
         }
-        if (Draft is not null)
+        if (Draft is not null || ProfilesDraft is not null)
         {
             return Failure("仍有未保存草稿，不能执行正常关闭清理。");
         }
@@ -379,7 +426,14 @@ public sealed class AppHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _sessionManager.DisposeAsync();
+        _lifetime.Cancel();
+        if (ReadOnlyMcp is not null) await ReadOnlyMcp.DisposeAsync().ConfigureAwait(false);
+        if (_recordingMaintenance is not null) await _recordingMaintenance.ConfigureAwait(false);
+        await _sessionManager.DisposeAsync().ConfigureAwait(false);
+        await WaitForRecordingStopsAsync().ConfigureAwait(false);
+        if (CommandHistory is not null) await CommandHistory.DisposeAsync().ConfigureAwait(false);
+        if (Transcripts is not null) await Transcripts.DisposeAsync().ConfigureAwait(false);
+        if (Diagnostics is not null) await Diagnostics.DisposeAsync().ConfigureAwait(false);
         _draftGate.Dispose();
         _layoutGate.Dispose();
         _lifetime.Dispose();

@@ -36,7 +36,10 @@ public static class ConfigurationValidator
             ValidateVisual(settings.Appearance.Visual, issues);
         }
 
-        if (settings.History is null || settings.History.MaxEntries is < 1 or > 1_000_000 || settings.History.RetentionDays is < 1 or > 3650)
+        if (settings.ShellNotifications is null || settings.ShellNotifications.LongTaskSeconds is < 1 or > 86400)
+            issues.Add(new("shellNotifications", "长任务门槛须为 1—86400 秒。"));
+
+        if (settings.History is null || settings.History.MaxEntries is < 1 or > 1_000_000 || settings.History.RetentionDays is < 1 or > 3650 || settings.History.MaxSizeBytes is < 1024 or > 16 * 1024 * 1024)
         {
             issues.Add(new("history", "历史上限或保留时长无效。"));
         }
@@ -52,7 +55,8 @@ public static class ConfigurationValidator
         if (settings.Workbench is null ||
             !Enum.IsDefined(settings.Workbench.TabPosition) ||
             string.IsNullOrWhiteSpace(settings.Workbench.CommandPaletteHotkey) ||
-            settings.Workbench.CommandPaletteHotkey.Length > 64)
+            settings.Workbench.CommandPaletteHotkey.Length > 64 ||
+            string.IsNullOrWhiteSpace(settings.Workbench.FocusModeHotkey) || settings.Workbench.FocusModeHotkey.Length > 64)
         {
             issues.Add(new("workbench", "标签位置或命令面板热键配置无效。"));
         }
@@ -104,9 +108,9 @@ public static class ConfigurationValidator
                 issues.Add(new($"{path}.id", "Profile ID 重复。"));
             }
 
-            if (string.IsNullOrWhiteSpace(profile.Name))
+            if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 128 || profile.Name.Any(char.IsControl))
             {
-                issues.Add(new($"{path}.name", "名称不能为空。"));
+                issues.Add(new($"{path}.name", "名称须为 1—128 个字符且不含控制字符。"));
             }
 
             if (string.IsNullOrWhiteSpace(profile.ExecutablePath) || profile.ExecutablePath.Contains('\0'))
@@ -115,6 +119,14 @@ public static class ConfigurationValidator
             }
 
             ValidatePathToken(profile.WorkingDirectory, $"{path}.workingDirectory", issues);
+            if (profile.Icon is null || profile.Icon.Length > 64 || profile.Icon.Any(char.IsControl))
+                issues.Add(new($"{path}.icon", "图标须为不含控制字符的文字或 Unicode 符号（最多 64 字符）。"));
+            if (profile.PostLaunchInput is null || profile.PostLaunchInput.Contains('\0'))
+                issues.Add(new($"{path}.postLaunchInput", "启动后文本不能为 null 或包含 NUL。"));
+            if (!Enum.IsDefined(profile.ShellIntegration))
+                issues.Add(new($"{path}.shellIntegration", "Shell 集成选项无效。"));
+            if (profile.ExecutablePath?.Contains("{{", StringComparison.Ordinal) == true || profile.ExecutablePath?.Contains("}}", StringComparison.Ordinal) == true)
+                issues.Add(new($"{path}.executablePath", "此字段不支持模板；{{home}} 仅用于目录字段。"));
             if (profile.Arguments is null || profile.Arguments.Any(argument => argument is null || argument.Contains('\0')))
             {
                 issues.Add(new($"{path}.arguments", "参数不能为 null 或包含 NUL。"));
@@ -126,9 +138,10 @@ public static class ConfigurationValidator
             }
             else
             {
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var pair in profile.Environment)
                 {
-                    if (string.IsNullOrWhiteSpace(pair.Key) || pair.Key.Contains('=') || pair.Key.Contains('\0') || pair.Value is null || pair.Value.Contains('\0'))
+                    if (string.IsNullOrWhiteSpace(pair.Key) || pair.Key.IndexOfAny(['=', '\0', '\r', '\n']) >= 0 || pair.Value is null || pair.Value.Contains('\0') || !names.Add(pair.Key))
                     {
                         issues.Add(new($"{path}.environment", "环境变量名称或值无效。"));
                     }
@@ -157,6 +170,10 @@ public static class ConfigurationValidator
                     issues.Add(new($"{path}.agentRecipe.agentId", "Agent ID 无效。"));
                 }
                 ValidatePathToken(profile.AgentRecipe.WorkingDirectory, $"{path}.agentRecipe.workingDirectory", issues);
+                if (!Enum.IsDefined(profile.AgentRecipe.ShellBackend) || profile.AgentRecipe.Arguments is null ||
+                    profile.AgentRecipe.Arguments.Any(value => value is null || value.Contains('\0')) ||
+                    profile.AgentRecipe.Model?.Contains('\0') == true || profile.AgentRecipe.PermissionMode?.Contains('\0') == true)
+                    issues.Add(new($"{path}.agentRecipe", "Agent 后端或参数无效。"));
             }
         }
 
@@ -216,7 +233,7 @@ public static class ConfigurationValidator
 
     private static void ValidateFont(string? family, double size, string path, List<ValidationIssue> issues)
     {
-        if (string.IsNullOrWhiteSpace(family) || !double.IsFinite(size) || size is < 6 or > 96)
+        if (string.IsNullOrWhiteSpace(family) || family.IndexOfAny(['/', '\\', '#', '\0', '\r', '\n']) >= 0 || !double.IsFinite(size) || size is < 6 or > 96)
         {
             issues.Add(new(path, "字体不能为空，字号须在 6 到 96 之间。"));
         }

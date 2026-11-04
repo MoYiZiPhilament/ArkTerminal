@@ -27,6 +27,7 @@ public sealed class TerminalRunSnapshot
 
 public sealed class TerminalClusterSnapshot
 {
+    public string? Hyperlink { get; init; }
     public required int StartColumn { get; init; }
     public required int ColumnWidth { get; init; }
     public required string Text { get; init; }
@@ -41,6 +42,8 @@ public sealed class TerminalClusterSnapshot
 public sealed class TerminalLineSnapshot
 {
     public required long LineId { get; init; }
+    public long? LogicalLineNumber { get; init; }
+    public DateTimeOffset? FirstOutputAtUtc { get; init; }
     public required string Text { get; init; }
     public bool IsSoftWrapped { get; init; }
     public IReadOnlyList<TerminalRunSnapshot> Runs { get; init; } = [];
@@ -102,6 +105,21 @@ public interface ITerminalBufferReader : IScreenSnapshotProvider
 public interface ITerminalInput
 {
     Task SubmitInputAsync(ReadOnlyMemory<char> input, CancellationToken cancellationToken);
+}
+
+public interface ITerminalBufferActions
+{
+    void ClearViewport();
+    void ClearScrollback();
+}
+
+public sealed record TerminalTextRange(long StartLine, int StartColumn, long EndLine, int EndColumn);
+public sealed record TerminalTextSlice(string Text, bool Truncated, bool Available, bool IsAlternateScreen);
+
+public sealed record TerminalBufferStatistics(int Columns, int Rows, int ScrollbackLines, int ScrollbackCapacity, long AllocatedCellSlots)
+{
+    // Capacity estimate only: excludes variable text, CLR and line/array overhead.
+    public long EstimatedCellStorageBytes => AllocatedCellSlots * 64;
 }
 
 public interface ITerminalRenderer

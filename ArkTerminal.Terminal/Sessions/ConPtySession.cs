@@ -4,10 +4,13 @@ using ArkTerminal.Terminal.Rendering;
 using ArkTerminal.Terminal.Screen;
 using ArkTerminal.Terminal.Sessions.Windows;
 using Microsoft.Win32.SafeHandles;
+using ArkTerminal.Terminal.Integration;
+using ArkTerminal.Terminal.Sessions.Elevation;
+using System.Text;
 
 namespace ArkTerminal.Terminal.Sessions;
 
-public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalInput
+public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalInput, ITerminalBufferActions, IShellIntegrationSource, ITerminalTextSource
 {
     private readonly object _lifecycleSync = new();
     private readonly object _resizeSync = new();
@@ -15,6 +18,9 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
     private readonly TerminalScreen _screen;
     private readonly TerminalStreamDecoder _streamDecoder;
     private readonly TerminalDiagnostics _diagnostics = new();
+    private readonly ShellIntegrationTracker _shell = new();
+    private readonly StringBuilder _plainText = new();
+    private ElevatedConnection? _remote;
     private readonly Channel<ReadOnlyMemory<byte>> _input;
     private readonly CancellationTokenSource _writeCancellation = new();
     private readonly CancellationTokenSource _resizeCancellation = new();
@@ -37,7 +43,8 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         _options = options;
         Id = Guid.NewGuid();
         _screen = new TerminalScreen(options.InitialColumns, options.InitialRows, options.MaxScrollbackLines);
-        _streamDecoder = new TerminalStreamDecoder(_screen, options, WriteResponse);
+        _streamDecoder = new TerminalStreamDecoder(_screen, options, WriteResponse, _shell.Accept, text => { if (TextReceived is not null) _plainText.Append(text); });
+        _shell.Changed += (_, args) => ShellIntegrationChanged?.Invoke(this, args);
         _input = Channel.CreateBounded<ReadOnlyMemory<byte>>(new BoundedChannelOptions(options.InputQueueCapacity)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -60,7 +67,30 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         }
     }
 
-    public TerminalDiagnosticSnapshot Diagnostics => _diagnostics.Snapshot();
+    public TerminalDiagnosticSnapshot Diagnostics
+    {
+        get
+        {
+            var io = _diagnostics.Snapshot(_input.Reader.Count, _options.InputQueueCapacity, _pendingResize is not null);
+            var parser = _streamDecoder.Diagnostics;
+            return new()
+            {
+                BytesRead = io.BytesRead, InputBytesWritten = io.InputBytesWritten, InputQueueDepth = io.InputQueueDepth, InputQueueCapacity = io.InputQueueCapacity,
+                ResizePending = io.ResizePending, ReadWorkerActive = io.ReadWorkerActive, WriteWorkerActive = io.WriteWorkerActive,
+                ReplacementCharacters = parser.ReplacementCharacters, IgnoredSequences = parser.IgnoredSequences, TruncatedSequences = parser.TruncatedSequences,
+                CsiSequences = parser.CsiSequences, OscSequences = parser.OscSequences
+            };
+        }
+    }
+    public TerminalBufferStatistics BufferStatistics => _screen.GetStatistics();
+    public string ShellTitle => _screen.GetShellTitle();
+    public string? VerifiedLaunchProcessName { get; private set; }
+    public ShellStatus ShellStatus => _shell.Status;
+    public event EventHandler<ShellIntegrationEventArgs>? ShellIntegrationChanged;
+    public event Action<string>? TextReceived;
+
+    public void ClearViewport() { _screen.ClearViewport(); PublishScreenChanges(); }
+    public void ClearScrollback() { _screen.ClearScrollback(); PublishScreenChanges(); }
     public bool BracketedPasteEnabled => _screen.GetModes().BracketedPaste;
     public bool ApplicationCursorKeys => _screen.GetModes().ApplicationCursorKeys;
     public bool Win32InputModeEnabled => _screen.GetModes().Win32InputMode;
@@ -75,21 +105,47 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         ConPtyProcess? process = null;
         try
         {
-            process = await Task.Run(
-                () => ConPtyProcess.Start(request, _options.InitialColumns, _options.InitialRows),
-                cancellationToken).ConfigureAwait(false);
-            lock (_lifecycleSync)
+            if (request.RunAsAdministrator)
+                request = await Task.Run(() => ShellLaunchAdapter.ResolveRequest(request), cancellationToken).ConfigureAwait(false);
+            var integration = ShellIntegrationInjector.Prepare(request);
+            _shell.Configure(integration.Token, integration.Shell, integration.Capabilities, integration.Detail);
+            request = integration.Request;
+            if (request.RunAsAdministrator)
             {
-                if (_closeTask is not null)
+                _remote = await ElevatedConnection.StartAsync(Id, request, _options, DecodeOutput, error =>
                 {
-                    process.Dispose();
-                    return;
+                    _streamDecoder.Complete(); PublishPlainText(); PublishScreenChanges();
+                    if (error is not null && State != SessionState.Exiting) TransitionTo(SessionState.Failed, error);
+                    _ = Task.Run(() => CloseAsync(CancellationToken.None));
+                }, cancellationToken).ConfigureAwait(false);
+                _remote.BeginReading();
+                lock (_lifecycleSync)
+                {
+                    _acceptingInput = _closeTask is null;
+                    _readTask = _remote.Completion;
+                    _writeTask = Task.Run(RemoteWriteLoopAsync);
+                    _resizeTask = Task.Run(ResizeLoop);
                 }
-                _process = process;
-                _acceptingInput = true;
-                _readTask = Task.Run(ReadLoop);
-                _writeTask = Task.Run(WriteLoop);
-                _resizeTask = Task.Run(ResizeLoop);
+            }
+            else
+            {
+                process = await Task.Run(
+                    () => ConPtyProcess.Start(request, _options.InitialColumns, _options.InitialRows),
+                    cancellationToken).ConfigureAwait(false);
+                lock (_lifecycleSync)
+                {
+                    if (_closeTask is not null)
+                    {
+                        process.Dispose();
+                        return;
+                    }
+                    _process = process;
+                    VerifiedLaunchProcessName = process.ExecutableName;
+                    _acceptingInput = true;
+                    _readTask = Task.Run(ReadLoop);
+                    _writeTask = Task.Run(WriteLoop);
+                    _resizeTask = Task.Run(ResizeLoop);
+                }
             }
             if (State == SessionState.Starting)
             {
@@ -114,6 +170,8 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
     public TerminalScreenSnapshot GetSnapshot() => _screen.GetSnapshot(Id);
     public TerminalScreenSnapshot GetSnapshot(int scrollbackOffset) => _screen.GetSnapshot(Id, scrollbackOffset);
     public TerminalBufferTextSnapshot CaptureText() => _screen.CaptureText(Id);
+    public TerminalTextSlice CaptureBoundedText(int maximumLines, int maximumCharacters, TerminalTextRange? selection = null)
+        => _screen.CaptureBoundedText(maximumLines, maximumCharacters, selection);
 
     public async Task WriteInputAsync(ReadOnlyMemory<char> input, CancellationToken cancellationToken)
     {
@@ -254,6 +312,13 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
             CancelSynchronousIo(_writeThread);
 
             var process = _process;
+            if (_remote is not null)
+            {
+                await _remote.DisposeAsync().ConfigureAwait(false);
+                await WaitForWorkerAsync(_writeTask).ConfigureAwait(false);
+                await WaitForWorkerAsync(_resizeTask).ConfigureAwait(false);
+                return;
+            }
             if (process is null)
             {
                 return;
@@ -338,11 +403,13 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                 }
                 _diagnostics.AddBytesRead(count);
                 _streamDecoder.Write(bytes, count);
+                PublishPlainText();
                 PublishOutput(bytes.AsMemory(0, count));
                 PublishScreenChanges();
             }
 
             _streamDecoder.Complete();
+            PublishPlainText();
             PublishScreenChanges();
         }
         catch (Exception exception) when (exception is IOException or ObjectDisposedException or OperationCanceledException)
@@ -405,6 +472,35 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         }
     }
 
+    private void DecodeOutput(byte[] bytes)
+    {
+        _diagnostics.AddBytesRead(bytes.Length);
+        _streamDecoder.Write(bytes, bytes.Length);
+        PublishPlainText(); PublishOutput(bytes); PublishScreenChanges();
+    }
+    private void PublishPlainText()
+    {
+        if (_plainText.Length == 0) return;
+        var text = _plainText.ToString(); _plainText.Clear(); TextReceived?.Invoke(text);
+    }
+    private async Task RemoteWriteLoopAsync()
+    {
+        _diagnostics.SetWriteWorker(true);
+        try
+        {
+            await foreach (var bytes in _input.Reader.ReadAllAsync(_writeCancellation.Token).ConfigureAwait(false))
+                for (var offset = 0; offset < bytes.Length; offset += ElevationProtocol.MaxIoBytes)
+                {
+                    var chunk = bytes.Slice(offset, Math.Min(ElevationProtocol.MaxIoBytes, bytes.Length - offset));
+                    await _remote!.SendAsync(ElevationMessage.Input, chunk, _writeCancellation.Token).ConfigureAwait(false);
+                    _diagnostics.AddInputBytes(chunk.Length);
+                }
+        }
+        catch (Exception error) when (error is IOException or ObjectDisposedException or OperationCanceledException)
+        { if (State == SessionState.Running) { TransitionTo(SessionState.Failed, "管理员输入连接已断开。"); _ = Task.Run(() => CloseAsync(CancellationToken.None)); } }
+        finally { _diagnostics.SetWriteWorker(false); }
+    }
+
     private void ResizeLoop()
     {
         try
@@ -425,6 +521,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                 try
                 {
                     _process?.Resize(request.Columns, request.Rows);
+                    _remote?.ResizeAsync(request.Columns, request.Rows).GetAwaiter().GetResult();
                     _screen.Resize(request.Columns, request.Rows);
                     PublishScreenChanges();
                     request.Completion.TrySetResult();

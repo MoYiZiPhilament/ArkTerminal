@@ -8,6 +8,7 @@ public sealed class RecoveryStartupResult
     public bool AbnormalExit { get; init; }
     public DocumentLoadResult<RecoveryState>? State { get; init; }
     public DocumentLoadResult<SettingsDraft>? Draft { get; init; }
+    public DocumentLoadResult<ProfilesDraft>? ProfilesDraft { get; init; }
     public DocumentSaveResult? MarkerError { get; init; }
 }
 
@@ -23,12 +24,14 @@ public sealed class RecoveryStateService : IRecoveryStateService
 {
     private readonly IAppDataPaths _paths;
     private readonly ISettingsDraftService _drafts;
+    private readonly ProfilesDraftService _profilesDrafts;
     private readonly JsonDocumentStore<RecoveryState> _store;
 
     public RecoveryStateService(IAppDataPaths paths, ISettingsDraftService drafts, StorageOptions options)
     {
         _paths = paths;
         _drafts = drafts;
+        _profilesDrafts = new(paths, options);
         _store = new JsonDocumentStore<RecoveryState>(paths.RecoveryStateFile, paths.BackupDirectory, options, RecoveryValidator.ValidateState);
     }
 
@@ -37,12 +40,14 @@ public sealed class RecoveryStateService : IRecoveryStateService
         var abnormal = File.Exists(_paths.ExitMarkerFile);
         var state = abnormal ? await _store.LoadAsync(cancellationToken) : null;
         var draft = abnormal ? await _drafts.LoadAsync(cancellationToken) : null;
+        var profilesDraft = abnormal ? await _profilesDrafts.LoadAsync(cancellationToken) : null;
         var marker = await MarkRunningAsync(cancellationToken);
         return new RecoveryStartupResult
         {
             AbnormalExit = abnormal,
             State = state,
             Draft = draft,
+            ProfilesDraft = profilesDraft,
             MarkerError = marker.Success ? null : marker
         };
     }
@@ -52,6 +57,8 @@ public sealed class RecoveryStateService : IRecoveryStateService
 
     public async Task<DocumentSaveResult> DiscardAsync(CancellationToken cancellationToken = default)
     {
+        var profilesResult = await _profilesDrafts.DeleteAsync(cancellationToken);
+        if (!profilesResult.Success) return profilesResult;
         var draftResult = await _drafts.DeleteAsync(cancellationToken);
         if (!draftResult.Success)
         {

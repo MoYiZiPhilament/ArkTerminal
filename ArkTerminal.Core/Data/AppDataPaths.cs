@@ -10,14 +10,18 @@ public sealed class AppDataPaths : IAppDataPaths
         ProfilesFile = Path.Combine(RootDirectory, "Config", "profiles.json");
         RecentProjectsFile = Path.Combine(RootDirectory, "Config", "recent-projects.json");
         SettingsDraftFile = Path.Combine(RootDirectory, "Recovery", "settings-draft.json");
+        ProfilesDraftFile = Path.Combine(RootDirectory, "Recovery", "profiles-draft.json");
         RecoveryStateFile = Path.Combine(RootDirectory, "Recovery", "recovery.json");
         ExitMarkerFile = Path.Combine(RootDirectory, "Recovery", "running.marker");
         BackupDirectory = Path.Combine(RootDirectory, "Backups");
         BackgroundsDirectory = Path.Combine(RootDirectory, "Backgrounds");
         DiagnosticsDirectory = Path.Combine(RootDirectory, "Diagnostics");
         AdaptersDirectory = Path.Combine(RootDirectory, "Adapters");
+        AgentPreferencesFile = Path.Combine(RootDirectory, "Config", "agent-adapters.json");
+        AgentDetectionCacheFile = Path.Combine(RootDirectory, "Config", "agent-detection.json");
         HistoryDirectory = Path.Combine(RootDirectory, "History");
         SessionSavesDirectory = Path.Combine(RootDirectory, "Sessions");
+        SnapshotsDirectory = Path.Combine(RootDirectory, "Snapshots");
     }
 
     public AppDataMode Mode { get; }
@@ -26,14 +30,18 @@ public sealed class AppDataPaths : IAppDataPaths
     public string ProfilesFile { get; }
     public string RecentProjectsFile { get; }
     public string SettingsDraftFile { get; }
+    public string ProfilesDraftFile { get; }
     public string RecoveryStateFile { get; }
     public string ExitMarkerFile { get; }
     public string BackupDirectory { get; }
     public string BackgroundsDirectory { get; }
     public string DiagnosticsDirectory { get; }
     public string AdaptersDirectory { get; }
+    public string AgentPreferencesFile { get; }
+    public string AgentDetectionCacheFile { get; }
     public string HistoryDirectory { get; }
     public string SessionSavesDirectory { get; }
+    public string SnapshotsDirectory { get; }
 
     internal IEnumerable<string> RequiredDirectories()
     {

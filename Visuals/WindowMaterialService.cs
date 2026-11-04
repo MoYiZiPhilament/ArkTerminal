@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Shell;
 using ArkTerminal.Core.Configuration;
 
 namespace ArkTerminal.Visuals;
@@ -21,20 +23,29 @@ public sealed record WindowMaterialResult(
 
 public sealed class WindowMaterialService
 {
+    private const int DwmaNcRenderingPolicy = 2;
+    private const int DwmncrpDisabled = 1;
     private const int DwmaUseImmersiveDarkMode = 20;
     private const int DwmaUseImmersiveDarkModeBefore20H1 = 19;
+    private const int DwmaWindowCornerPreference = 33;
+    private const int DwmwcpRound = 2;
     private const int DwmaSystemBackdropType = 38;
     private const int DwmaCloaked = 14;
     private const int DwmsbtNone = 1;
     private const int DwmsbtMainWindow = 2;
     private const int DwmsbtTransientWindow = 3;
     private IntPtr _hwnd;
+    private Window? _window;
+    private bool _customCaption;
 
     public WindowMaterialCapabilities Capabilities { get; private set; } = Probe();
+    internal bool UsesNativeCorners { get; private set; }
 
     public void Attach(HwndSource source)
     {
         _hwnd = source.Handle;
+        _window = source.RootVisual as Window;
+        _customCaption = _window is not null && WindowChrome.GetWindowChrome(_window)?.UseAeroCaptionButtons == false;
         RefreshCapabilities();
     }
 
@@ -47,10 +58,27 @@ public sealed class WindowMaterialService
             return new(WindowMaterialMode.Off, false, "窗口句柄尚未就绪。", false);
         }
         SetDarkMode(dark);
+        var cornerResult = ApplyWindowCorners();
         if (!Capabilities.CompositionEnabled)
         {
             ResetEffects();
             return new(WindowMaterialMode.Off, false, "DWM 合成不可用，已使用不透明背景。", false);
+        }
+        if (cornerResult != 0)
+        {
+            ResetEffects();
+            return new(WindowMaterialMode.Off, false, $"窗口圆角设置失败（0x{cornerResult:X8}），已回退不透明背景；保存的材质偏好不变。", false);
+        }
+        if (_customCaption)
+        {
+            // An extended DWM frame otherwise masks the area occupied by our caption buttons.
+            var policy = DwmncrpDisabled;
+            var result = DwmSetWindowAttribute(_hwnd, DwmaNcRenderingPolicy, ref policy, sizeof(int));
+            if (result != 0)
+            {
+                ResetEffects();
+                return new(WindowMaterialMode.Off, false, $"自绘标题栏设置失败（0x{result:X8}），已回退不透明背景。", false);
+            }
         }
         if (desktopBackground && !Capabilities.TransparencySupported ||
             (requested is WindowMaterialMode.Mica or WindowMaterialMode.Acrylic) && !Capabilities.SystemBackdropSupported)
@@ -119,6 +147,26 @@ public sealed class WindowMaterialService
             return unchecked((int)0x80070032);
         }
         return DwmSetWindowAttribute(_hwnd, DwmaSystemBackdropType, ref type, sizeof(int));
+    }
+
+    private int ApplyWindowCorners()
+    {
+        UsesNativeCorners = false;
+        if (!_customCaption || _window is null || WindowChrome.GetWindowChrome(_window) is not { } chrome)
+        {
+            return 0;
+        }
+        var result = 0;
+        if (Capabilities.CompositionEnabled && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        {
+            var preference = DwmwcpRound;
+            result = DwmSetWindowAttribute(_hwnd, DwmaWindowCornerPreference, ref preference, sizeof(int));
+            UsesNativeCorners = result == 0;
+        }
+        // A nonzero glass frame makes WindowChrome clear its HRGN and leaves the outer silhouette to DWM.
+        chrome.CornerRadius = new CornerRadius(UsesNativeCorners ? 0 : 24);
+        chrome.GlassFrameThickness = new Thickness(UsesNativeCorners ? -1 : 0);
+        return result;
     }
 
     private int ExtendFrame(bool enabled)

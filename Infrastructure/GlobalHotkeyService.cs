@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -9,115 +9,126 @@ public sealed class GlobalHotkeyService : IDisposable
 {
     private const int HotkeyId = 0x4152;
     private const int FocusHotkeyId = 0x4153;
+    private const int ContextHotkeyId = 0x4154;
     private const int WmHotkey = 0x0312;
     private HwndSource? _source;
     private bool _registered;
     private bool _focusRegistered;
-    private bool _enabled;
-    private string _gesture = string.Empty;
-    private uint _modifiers;
-    private uint _key;
+    private bool _contextRegistered;
     private bool _disposed;
-
+    private ArkTerminal.Core.Configuration.WorkbenchSettings _settings = new();
     public event Action? Invoked;
     public event Action? FocusInvoked;
+    public event Action? ContextInvoked;
     public string StatusText { get; private set; } = string.Empty;
     public bool IsRegistered => _registered;
-
+    public bool IsFocusRegistered => _focusRegistered;
+    public bool IsContextRegistered => _contextRegistered;
     public void Attach(HwndSource source)
     {
-        _source = source;
-        _source.AddHook(OnWindowMessage);
-        _focusRegistered = RegisterHotKey(source.Handle, FocusHotkeyId, ModControl | ModShift | ModNoRepeat, 0x7A);
+        _source = source; source.AddHook(OnWindowMessage);
+        _contextRegistered = RegisterHotKey(source.Handle, ContextHotkeyId, ModControl | ModShift | ModNoRepeat, 0x78);
+    }
+
+    public static bool Validate(ArkTerminal.Core.Configuration.WorkbenchSettings settings, out string error)
+    {
+        error = string.Empty;
+        foreach (var gesture in new[] { settings.CommandPaletteHotkey, settings.FocusModeHotkey })
+        {
+            if (!TryParse(gesture, out var modifiers, out var key)) { error = "热键须包含修饰键和一个普通键。"; return false; }
+            if (IsReserved(modifiers, key)) { error = "热键与固定终端或编辑手势冲突；Ctrl+C 始终保留中断语义。"; return false; }
+        }
+        TryParse(settings.CommandPaletteHotkey, out var pm, out var pk);
+        TryParse(settings.FocusModeHotkey, out var fm, out var fk);
+        if (settings.CommandPaletteHotkeyEnabled && settings.FocusModeHotkeyEnabled && pm == fm && pk == fk)
+        { error = "两项全局热键不能相同。"; return false; }
+        return true;
     }
 
     public bool Configure(bool enabled, string gesture, out string error)
     {
-        error = string.Empty;
-        if (_disposed || _source is null)
-        {
-            error = "窗口尚未准备好注册全局热键。";
-            return false;
-        }
-        if (_enabled == enabled && _gesture == gesture && (_registered || !enabled))
-        {
-            return true;
-        }
-        if (!enabled)
+        var candidate = _settings.DeepClone();
+        candidate.CommandPaletteHotkeyEnabled = enabled;
+        candidate.CommandPaletteHotkey = gesture;
+        return Configure(candidate, out error);
+    }
+
+    public bool Configure(ArkTerminal.Core.Configuration.WorkbenchSettings settings, out string error)
+    {
+        if (_disposed || _source is null) { error = "窗口尚未准备好。"; return false; }
+        if (!Validate(settings, out error)) return false;
+        if (_settings.CommandPaletteHotkeyEnabled == settings.CommandPaletteHotkeyEnabled && _settings.CommandPaletteHotkey == settings.CommandPaletteHotkey &&
+            _settings.FocusModeHotkeyEnabled == settings.FocusModeHotkeyEnabled && _settings.FocusModeHotkey == settings.FocusModeHotkey &&
+            (_registered || !settings.CommandPaletteHotkeyEnabled) && (_focusRegistered || !settings.FocusModeHotkeyEnabled)) return true;
+        var previous = _settings.DeepClone();
+        Unregister();
+        if (!Register(settings, out error))
         {
             Unregister();
-            _enabled = false;
-            _gesture = gesture;
-            StatusText = "全局热键已禁用。";
-            return true;
-        }
-        if (!TryParse(gesture, out var modifiers, out var key))
-        {
-            error = "热键须使用 Ctrl/Shift/Alt/Win 修饰键和一个普通键。";
+            var restored = Register(previous, out _);
+            StatusText = "注册失败：" + error + (restored ? "；旧组合已恢复。" : "；旧组合未能全部恢复，请查看各项状态。") + Describe();
             return false;
         }
-        var hadRegistration = _registered;
-        var oldModifiers = _modifiers;
-        var oldKey = _key;
-        Unregister();
-        if (!RegisterHotKey(_source.Handle, HotkeyId, modifiers | ModNoRepeat, key))
-        {
-            error = new Win32Exception(Marshal.GetLastWin32Error()).Message;
-            _registered = hadRegistration && RegisterHotKey(_source.Handle, HotkeyId, oldModifiers, oldKey);
-            StatusText = $"热键注册失败：{error}" + (_registered ? " 已保留旧热键。" : " 旧热键未恢复。");
-            return false;
-        }
-        _registered = true;
-        _enabled = true;
-        _gesture = gesture;
-        _modifiers = modifiers | ModNoRepeat;
-        _key = key;
-        StatusText = $"全局热键：{gesture}";
+        _settings = settings.DeepClone();
+        StatusText = Describe();
         return true;
     }
 
+    private bool Register(ArkTerminal.Core.Configuration.WorkbenchSettings settings, out string error)
+    {
+        error = string.Empty;
+        if (settings.CommandPaletteHotkeyEnabled)
+        {
+            TryParse(settings.CommandPaletteHotkey, out var modifiers, out var key);
+            _registered = RegisterHotKey(_source!.Handle, HotkeyId, modifiers | ModNoRepeat, key);
+            if (!_registered) { error = new Win32Exception(Marshal.GetLastWin32Error()).Message; return false; }
+        }
+        if (settings.FocusModeHotkeyEnabled)
+        {
+            TryParse(settings.FocusModeHotkey, out var modifiers, out var key);
+            _focusRegistered = RegisterHotKey(_source!.Handle, FocusHotkeyId, modifiers | ModNoRepeat, key);
+            if (!_focusRegistered) { error = new Win32Exception(Marshal.GetLastWin32Error()).Message; return false; }
+        }
+        return true;
+    }
+
+    private string Describe() => $" 命令面板：{(_registered ? "已注册" : "未注册/禁用")}；专注模式：{(_focusRegistered ? "已注册" : "未注册/禁用")}；上下文 Ctrl+Shift+F9：{(_contextRegistered ? "已注册" : "被占用；使用命令面板")}。";
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
+        if (_disposed) return;
         Unregister();
-        if (_focusRegistered && _source is not null)
-        {
-            UnregisterHotKey(_source.Handle, FocusHotkeyId);
-        }
-        _focusRegistered = false;
+        if (_contextRegistered && _source is not null) UnregisterHotKey(_source.Handle, ContextHotkeyId);
+        _contextRegistered = false;
         _source?.RemoveHook(OnWindowMessage);
         _source = null;
         _disposed = true;
     }
-
     private IntPtr OnWindowMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (message == WmHotkey && wParam.ToInt32() == HotkeyId)
-        {
-            Invoked?.Invoke();
-            handled = true;
-        }
-        else if (message == WmHotkey && wParam.ToInt32() == FocusHotkeyId)
-        {
-            FocusInvoked?.Invoke();
-            handled = true;
-        }
+        if (message != WmHotkey) return IntPtr.Zero;
+        if (wParam.ToInt32() == HotkeyId && _registered) { Invoked?.Invoke(); handled = true; }
+        if (wParam.ToInt32() == FocusHotkeyId && _focusRegistered) { FocusInvoked?.Invoke(); handled = true; }
+        if (wParam.ToInt32() == ContextHotkeyId && _contextRegistered) { ContextInvoked?.Invoke(); handled = true; }
         return IntPtr.Zero;
     }
-
     private void Unregister()
     {
-        if (_registered && _source is not null)
+        if (_source is not null)
         {
-            UnregisterHotKey(_source.Handle, HotkeyId);
+            if (_registered) UnregisterHotKey(_source.Handle, HotkeyId);
+            if (_focusRegistered) UnregisterHotKey(_source.Handle, FocusHotkeyId);
         }
-        _registered = false;
+        _registered = _focusRegistered = false;
+    }
+    private static bool IsReserved(uint modifiers, uint key)
+    {
+        if (modifiers == (ModControl | ModShift) && key == 0x78) return true;
+        if (modifiers == ModControl && key is 0x41 or 0x43 or 0x56 or 0x58 or 0x46 or 0x09 or 0x30 or 0xBB or 0xBD or 0x6B or 0x6D) return true;
+        if (modifiers == (ModControl | ModShift) && key is 0x41 or 0x43 or 0x56 or 0x54 or 0x57 or 0x4B or 0x09 or 0x24 or 0x23 or 0xBB) return true;
+        return modifiers == ModShift && key is 0x21 or 0x22;
     }
 
-    private static bool TryParse(string gesture, out uint modifiers, out uint key)
+    public static bool TryParse(string gesture, out uint modifiers, out uint key)
     {
         modifiers = 0;
         key = 0;

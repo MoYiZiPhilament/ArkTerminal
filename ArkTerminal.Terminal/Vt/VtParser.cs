@@ -25,6 +25,8 @@ internal sealed class VtParser
     private readonly TerminalSessionOptions _options;
     private readonly TerminalDiagnostics _diagnostics;
     private readonly Action<ReadOnlyMemory<byte>> _respond;
+    private readonly Action<string>? _osc;
+    private readonly Action<string>? _plainText;
     private readonly StringBuilder _text = new();
     private readonly IncrementalTextElementSegmenter _textElements = new();
     private readonly StringBuilder _sequence = new();
@@ -35,12 +37,16 @@ internal sealed class VtParser
         TerminalScreen screen,
         TerminalSessionOptions options,
         TerminalDiagnostics diagnostics,
-        Action<ReadOnlyMemory<byte>> respond)
+        Action<ReadOnlyMemory<byte>> respond,
+        Action<string>? osc = null,
+        Action<string>? text = null)
     {
         _screen = screen;
         _options = options;
         _diagnostics = diagnostics;
         _respond = respond;
+        _osc = osc;
+        _plainText = text;
     }
 
     internal void Write(ReadOnlySpan<char> input)
@@ -49,6 +55,16 @@ internal sealed class VtParser
         {
             if (character == '\u001b')
             {
+                if (_state is ParserState.Osc or ParserState.OscEscape)
+                {
+                    _state = ParserState.OscEscape;
+                    continue;
+                }
+                if (_state is ParserState.IgnoreString or ParserState.IgnoreStringEscape)
+                {
+                    _state = ParserState.IgnoreStringEscape;
+                    continue;
+                }
                 FlushText();
                 _sequence.Clear();
                 _state = ParserState.Escape;
@@ -131,10 +147,6 @@ internal sealed class VtParser
                     {
                         _state = ParserState.Ground;
                     }
-                    else
-                    {
-                        _state = ParserState.IgnoreStringEscape;
-                    }
                     break;
                 case ParserState.IgnoreStringEscape:
                     _state = character == '\\' ? ParserState.Ground : ParserState.IgnoreString;
@@ -216,6 +228,7 @@ internal sealed class VtParser
 
     private void ExecuteControl(char character)
     {
+        if (character is '\t' or '\n' or '\r') _plainText?.Invoke(character.ToString());
         switch (character)
         {
             case '\b':
@@ -243,6 +256,7 @@ internal sealed class VtParser
         }
         var text = _text.ToString();
         _text.Clear();
+        if (text.Length > 0) _plainText?.Invoke(text);
         _textElements.Write(text, flush, element =>
         {
             foreach (var rune in element.EnumerateRunes())
@@ -253,7 +267,7 @@ internal sealed class VtParser
                 }
             }
             _screen.WriteTextElement(element, TerminalWidthPolicy.GetColumnWidth(element), _style);
-        });
+        }, (previous, element) => _screen.UpdateTextElement(previous, element, _style));
     }
 
     private void StartCsi()
@@ -285,12 +299,22 @@ internal sealed class VtParser
         _sequence.Clear();
         _state = ParserState.Ground;
         _diagnostics.AddOsc();
+        _osc?.Invoke(sequence);
         var separator = sequence.IndexOf(';');
         if (separator > 0 && sequence.AsSpan(0, separator) is "0" or "2")
         {
             _screen.SetTitle(sequence[(separator + 1)..]);
         }
-        else
+        else if (sequence.StartsWith("8;", StringComparison.Ordinal))
+        {
+            var targetSeparator = sequence.IndexOf(';', 2);
+            if (targetSeparator >= 0)
+            {
+                var target = sequence[(targetSeparator + 1)..];
+                _style = _style with { Hyperlink = target.Length is > 0 and <= 2048 && !target.Any(char.IsControl) ? target : null };
+            }
+        }
+        else if (!sequence.StartsWith("633;Ark;", StringComparison.Ordinal))
         {
             _diagnostics.AddIgnoredSequence();
         }
@@ -489,7 +513,7 @@ internal sealed class VtParser
     {
         if (parameters.Count == 1 && parameters[0] == -1)
         {
-            _style = TerminalStyle.Default;
+            _style = TerminalStyle.Default with { Hyperlink = _style.Hyperlink };
             return;
         }
 
@@ -498,7 +522,7 @@ internal sealed class VtParser
             var parameter = parameters[index] < 0 ? 0 : parameters[index];
             switch (parameter)
             {
-                case 0: _style = TerminalStyle.Default; break;
+                case 0: _style = TerminalStyle.Default with { Hyperlink = _style.Hyperlink }; break;
                 case 1: _style = _style with { Bold = true }; break;
                 case 22: _style = _style with { Bold = false }; break;
                 case 4: _style = _style with { Underline = true }; break;

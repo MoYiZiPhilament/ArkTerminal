@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using System.Text;
 using ArkTerminal.Terminal.Rendering;
 
@@ -15,6 +16,7 @@ public sealed class TerminalScreen
     private int _scrollBottom;
     private (int Row, int Column, bool WrapPending) _savedCursor;
     private long _generation;
+    private long _nextLogicalLineNumber;
     private int _dirtyStart = int.MaxValue;
     private int _dirtyEnd = -1;
 
@@ -77,7 +79,15 @@ public sealed class TerminalScreen
         }
     }
 
+    internal string GetShellTitle()
+    {
+        lock (_sync) return ShellTitle;
+    }
+
     internal void WriteTextElement(string text, int width, TerminalStyle style)
+        => WriteTextElementCore(text, width, style, extendPrevious: true);
+
+    private void WriteTextElementCore(string text, int width, TerminalStyle style, bool extendPrevious)
     {
         lock (_sync)
         {
@@ -86,7 +96,7 @@ public sealed class TerminalScreen
                 AppendCombiningText(text);
                 return;
             }
-            if (TryExtendPreviousCluster(text))
+            if (extendPrevious && TryExtendPreviousCluster(text))
             {
                 return;
             }
@@ -116,6 +126,7 @@ public sealed class TerminalScreen
 
             var line = _active.Lines[_active.CursorRow];
             var column = _active.CursorColumn;
+            StampOutput(line);
             line.Cells[column].Text = text;
             line.Cells[column].Style = style;
             line.Cells[column].IsContinuation = false;
@@ -142,6 +153,47 @@ public sealed class TerminalScreen
         }
     }
 
+    internal void UpdateTextElement(string previousText, string text, TerminalStyle style)
+    {
+        lock (_sync)
+        {
+            if (TerminalWidthPolicy.GetColumnWidth(previousText) == 0)
+            {
+                WriteTextElementCore(text[previousText.Length..], 0, style, extendPrevious: false);
+                return;
+            }
+            var row = _active.CursorRow;
+            var column = _active.WrapPending ? _active.CursorColumn : _active.CursorColumn - 1;
+            if (column < 0 && row > 0 && _active.Lines[row - 1].IsSoftWrapped)
+            {
+                row--;
+                column = Columns - 1;
+            }
+            if (column >= 0 && _active.Lines[row].Cells[column].IsContinuation) column--;
+            if (column < 0 || _active.Lines[row].Cells[column].Text != previousText)
+            {
+                WriteTextElementCore(text, TerminalWidthPolicy.GetColumnWidth(text), style, extendPrevious: false);
+                return;
+            }
+            var line = _active.Lines[row];
+            var previous = line.Cells[column];
+            var width = Columns == 1 ? 1 : Math.Clamp(TerminalWidthPolicy.GetColumnWidth(text), 1, 2);
+            if (width == 2 && column == Columns - 1 && !AutoWrap) width = 1;
+            if (width == previous.ColumnWidth)
+            {
+                previous.Text = text;
+                MarkDirty(row, row);
+                return;
+            }
+            if (previous.ColumnWidth == 2) line.Cells[column + 1].Clear(style);
+            previous.Clear(style);
+            _active.CursorRow = row;
+            _active.CursorColumn = column;
+            _active.WrapPending = false;
+            WriteTextElementCore(text, width, style, extendPrevious: false);
+        }
+    }
+
     internal void CarriageReturn()
     {
         lock (_sync)
@@ -156,6 +208,7 @@ public sealed class TerminalScreen
     {
         lock (_sync)
         {
+            StampOutput(_active.Lines[_active.CursorRow]);
             LineFeedCore();
         }
     }
@@ -575,6 +628,43 @@ public sealed class TerminalScreen
         }
     }
 
+    public TerminalBufferStatistics GetStatistics()
+    {
+        lock (_sync)
+            return new(Columns, Rows, _scrollback.Count, _maxScrollbackLines,
+                (long)Columns * (_scrollback.Count + _main.Lines.Count + _alternate.Lines.Count));
+    }
+
+    public void ClearViewport()
+    {
+        lock (_sync)
+        {
+            foreach (var line in _active.Lines)
+            {
+                line.Clear(TerminalStyle.Default);
+                line.LogicalLineNumber = null;
+                line.FirstOutputAtUtc = null;
+            }
+            MarkAllDirty();
+        }
+    }
+
+    public void ClearScrollback()
+    {
+        lock (_sync)
+        {
+            _scrollback.Clear();
+            MarkAllDirty();
+        }
+    }
+
+    private void StampOutput(TerminalLine line)
+    {
+        if (line.LogicalLineNumber is not null) return;
+        line.LogicalLineNumber = ++_nextLogicalLineNumber;
+        line.FirstOutputAtUtc = DateTimeOffset.UtcNow;
+    }
+
     public TerminalBufferTextSnapshot CaptureText(Guid sessionId)
     {
         lock (_sync)
@@ -587,6 +677,62 @@ public sealed class TerminalScreen
                 IsAlternateScreen = IsAlternateScreen,
                 Lines = lines.Select(CreateLogicalLine).ToArray()
             };
+        }
+    }
+
+    public TerminalTextSlice CaptureBoundedText(int maximumLines, int maximumCharacters, TerminalTextRange? selection = null)
+    {
+        maximumLines = Math.Clamp(maximumLines, 1, Core.Context.ContextLimits.MaxLines);
+        maximumCharacters = Math.Clamp(maximumCharacters, 1, Core.Context.ContextLimits.MaxBytes);
+        lock (_sync)
+        {
+            var historyCount = IsAlternateScreen ? 0 : _scrollback.Count;
+            var total = historyCount + _active.Lines.Count;
+            TerminalLine Line(int index) => index < historyCount ? _scrollback[index] : _active.Lines[index - historyCount];
+            var start = Math.Max(0, total - maximumLines);
+            var end = total - 1;
+            var truncated = start > 0;
+            if (selection is not null)
+            {
+                start = -1; end = -1;
+                for (var i = 0; i < total; i++)
+                {
+                    if (Line(i).Id == selection.StartLine) start = i;
+                    if (Line(i).Id == selection.EndLine) end = i;
+                }
+                if (start < 0 || end < start) return new(string.Empty, false, false, IsAlternateScreen);
+                truncated = end - start + 1 > maximumLines;
+                end = Math.Min(end, start + maximumLines - 1);
+            }
+            var chunks = new List<string>();
+            var remaining = maximumCharacters;
+            for (var offset = 0; offset <= end - start; offset++)
+            {
+                var index = selection is null ? end - offset : start + offset;
+                var line = Line(index);
+                var first = selection is not null && line.Id == selection.StartLine ? selection.StartColumn : 0;
+                var last = selection is not null && line.Id == selection.EndLine ? selection.EndColumn : line.Cells.Length;
+                last = Math.Min(last, line.Cells.Length);
+                var occupied = Array.FindLastIndex(line.Cells, cell => !cell.IsContinuation && cell.Text.Length > 0);
+                if (last >= line.Cells.Length) last = occupied + 1;
+                var pieces = new List<string>();
+                var newline = !line.IsSoftWrapped && index < end;
+                if (newline && remaining > 0) remaining--;
+                for (var n = 0; n < last - Math.Max(0, first); n++)
+                {
+                    var column = selection is null ? last - n - 1 : Math.Max(0, first) + n;
+                    var cell = line.Cells[column];
+                    if (cell.IsContinuation) continue;
+                    var text = cell.Text.Length == 0 ? " " : cell.Text;
+                    if (text.Length > remaining) { truncated = true; remaining = 0; break; }
+                    pieces.Add(text); remaining -= text.Length;
+                }
+                if (selection is null) pieces.Reverse();
+                chunks.Add(string.Concat(pieces) + (newline ? "\n" : string.Empty));
+                if (remaining == 0) { truncated |= offset < end - start; break; }
+            }
+            if (selection is null) chunks.Reverse();
+            return new(string.Concat(chunks).TrimEnd('\r', '\n'), truncated, true, IsAlternateScreen);
         }
     }
 
@@ -638,8 +784,9 @@ public sealed class TerminalScreen
         {
             return false;
         }
-        previous.Text += extendJoiner && text.StartsWith('\u200D') ? text.TrimStart('\u200D') : text;
-        MarkDirty(_active.CursorRow, _active.CursorRow);
+        var combined = previous.Text + text;
+        if (StringInfo.GetNextTextElementLength(combined) != combined.Length) return false;
+        UpdateTextElement(previous.Text, combined, previous.Style);
         return true;
     }
 
@@ -655,6 +802,7 @@ public sealed class TerminalScreen
     private void AppendCombiningText(string text)
     {
         var line = _active.Lines[_active.CursorRow];
+        StampOutput(line);
         var column = _active.CursorColumn;
         if (line.Cells[column].IsContinuation && column > 0)
         {
@@ -674,10 +822,13 @@ public sealed class TerminalScreen
 
     private void WrapLine()
     {
+        var previous = _active.Lines[_active.CursorRow];
         _active.Lines[_active.CursorRow].IsSoftWrapped = true;
         _active.WrapPending = false;
         _active.CursorColumn = 0;
         LineFeedCore();
+        _active.Lines[_active.CursorRow].LogicalLineNumber = previous.LogicalLineNumber;
+        _active.Lines[_active.CursorRow].FirstOutputAtUtc = previous.FirstOutputAtUtc;
     }
 
     private void LineFeedCore()
@@ -781,6 +932,8 @@ public sealed class TerminalScreen
                 target.Lines[row].Cells[column] = source.Lines[row].Cells[column].Clone();
             }
             target.Lines[row].IsSoftWrapped = source.Lines[row].IsSoftWrapped;
+            target.Lines[row].LogicalLineNumber = source.Lines[row].LogicalLineNumber;
+            target.Lines[row].FirstOutputAtUtc = source.Lines[row].FirstOutputAtUtc;
         }
         target.CursorRow = Math.Clamp(source.CursorRow, 0, rows - 1);
         target.CursorColumn = Math.Clamp(source.CursorColumn, 0, columns - 1);
@@ -834,8 +987,9 @@ public sealed class TerminalScreen
                 cells.Add(new TerminalCell());
             }
 
+            var metadata = logical.FirstOrDefault(item => item.LogicalLineNumber is not null);
             var outputStart = output.Count;
-            var line = new TerminalLine(columns);
+            var line = new TerminalLine(columns) { LogicalLineNumber = metadata?.LogicalLineNumber, FirstOutputAtUtc = metadata?.FirstOutputAtUtc };
             var column = 0;
             for (var index = 0; index < cells.Count; index++)
             {
@@ -849,7 +1003,7 @@ public sealed class TerminalScreen
                 {
                     line.IsSoftWrapped = true;
                     output.Add(line);
-                    line = new TerminalLine(columns);
+                    line = new TerminalLine(columns) { LogicalLineNumber = metadata?.LogicalLineNumber, FirstOutputAtUtc = metadata?.FirstOutputAtUtc };
                     column = 0;
                 }
                 line.Cells[column++] = cell;
@@ -861,7 +1015,7 @@ public sealed class TerminalScreen
                 {
                     line.IsSoftWrapped = true;
                     output.Add(line);
-                    line = new TerminalLine(columns);
+                    line = new TerminalLine(columns) { LogicalLineNumber = metadata?.LogicalLineNumber, FirstOutputAtUtc = metadata?.FirstOutputAtUtc };
                     column = 0;
                 }
             }
@@ -921,7 +1075,8 @@ public sealed class TerminalScreen
                 Background = cell.Style.Background,
                 Bold = cell.Style.Bold,
                 Underline = cell.Style.Underline,
-                Inverse = cell.Style.Inverse
+                Inverse = cell.Style.Inverse,
+                Hyperlink = cell.Style.Hyperlink
             });
             if (text is null)
             {
@@ -945,6 +1100,8 @@ public sealed class TerminalScreen
         return new TerminalLineSnapshot
         {
             LineId = line.Id,
+            LogicalLineNumber = line.LogicalLineNumber,
+            FirstOutputAtUtc = line.FirstOutputAtUtc,
             Text = string.Concat(runs.Select(run => run.Text)),
             IsSoftWrapped = line.IsSoftWrapped,
             Runs = runs,

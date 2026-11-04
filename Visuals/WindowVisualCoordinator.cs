@@ -79,8 +79,10 @@ public sealed class WindowVisualCoordinator : IDisposable
 
     public event Action? PresentationChanged;
     public bool PerformanceModeEnabled { get; private set; }
+    public bool IsPresentationSuspended => _window.WindowState == WindowState.Minimized || !_window.IsVisible || _material.IsCloaked();
     public bool SupportsSystemBackdrop => _material.Capabilities.SystemBackdropSupported;
     public bool SupportsDesktopBackground => _material.Capabilities.TransparencySupported;
+    internal bool UsesNativeWindowCorners => _material.UsesNativeCorners;
     public bool AnimationsEnabled => !PerformanceModeEnabled && SystemParameters.ClientAreaAnimation;
     public string CapabilityText => $"{_material.Capabilities.Summary}。{_materialResult.Status}" +
         (string.IsNullOrEmpty(_appearance.Visual.BackgroundImagePath) ? string.Empty : " 背景图另含固定可读性遮罩（浅色 65% / 深色 45%）。");
@@ -355,6 +357,7 @@ public sealed class WindowVisualCoordinator : IDisposable
         if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation))
         {
             UpdateActivity();
+            PresentationChanged?.Invoke();
         }
     }
 

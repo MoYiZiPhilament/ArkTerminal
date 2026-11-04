@@ -2,6 +2,20 @@ namespace ArkTerminal.Rendering;
 
 public sealed record TerminalFontOptions
 {
+    public static TerminalFontOptions Resolve(Core.Configuration.AppearanceSettings? appearance, Core.Profiles.TerminalProfile? profile = null)
+    {
+        appearance ??= new();
+        var local = profile?.Terminal;
+        return new()
+        {
+            FontFamily = local is { UseGlobalFont: false } ? local.FontFamily : appearance.TerminalFontFamily,
+            FontSize = local is { UseGlobalFont: false } ? local.FontSize : appearance.TerminalFontSize,
+            FontWeight = appearance.TerminalFontWeight,
+            LineHeightMultiplier = appearance.TerminalLineHeight,
+            CharacterSpacing = appearance.TerminalCharacterSpacing,
+            Ligatures = appearance.TerminalLigatures
+        };
+    }
     public string FontFamily { get; init; } = "Cascadia Mono";
     public double FontSize { get; init; } = 14;
     public int FontWeight { get; init; } = 400;

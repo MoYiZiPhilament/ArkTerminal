@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shell;
 using ArkTerminal.Commands;
 using ArkTerminal.Core.Configuration;
 using ArkTerminal.Core.Profiles;
@@ -43,11 +44,20 @@ public partial class MainWindow : Window
         _host = host;
         InitializeComponent();
         _visuals = new WindowVisualCoordinator(this, TerminalView, BackgroundImage, BackgroundOverlay, ReadabilityOverlay, AuroraView, host.Paths);
+        MotionPolicy.SetEnabled(_visuals.AnimationsEnabled);
+        TerminalView.SetAnimationsEnabled(_visuals.AnimationsEnabled);
         _visuals.PresentationChanged += () =>
         {
+            MotionPolicy.SetEnabled(_visuals.AnimationsEnabled);
+            TerminalView.SetAnimationsEnabled(_visuals.AnimationsEnabled);
             VisualCapabilityText.Text = _visuals.CapabilityText;
             UpdateDraftControls();
             UpdatePerformanceButton();
+            UpdateCaptionButtons();
+            var style = TerminalView.VisualStyle;
+            var inset = new SolidColorBrush(style.Background) { Opacity = style.BackgroundOpacity };
+            inset.Freeze();
+            TerminalCanvas.BorderBrush = inset;
         };
         _tabs = new TerminalTabsViewModel(host.Sessions);
         TabStrip.ItemsSource = _tabs.Tabs;
@@ -55,16 +65,20 @@ public partial class MainWindow : Window
         _tabs.LayoutChanged += ScheduleLayoutSave;
         _tabs.TabDetaching += DetachTab;
         TabStrip.Dropped += TabStrip_Dropped;
-        TerminalView.InputError += message => Dispatcher.BeginInvoke(() => StatusText.Text = message);
+        TerminalView.InputError += message => Dispatcher.BeginInvoke(() => { _host.Diagnostics.Record(ArkTerminal.Core.Diagnostics.DiagnosticComponent.Terminal, ArkTerminal.Core.Diagnostics.DiagnosticEventKind.InputFailed); StatusText.Text = message; });
         TerminalView.SearchRequested += ShowSearch;
-        DpiChanged += (_, _) => TerminalView.NotifyDpiChanged();
         LocationChanged += (_, _) => TerminalView.InvalidateArrange();
         _hotkey.Invoked += () => Dispatcher.BeginInvoke(ShowCommandPalette);
         _hotkey.FocusInvoked += () => Dispatcher.BeginInvoke(ToggleFocusMode);
         _commandKeys.CommandPaletteRequested += () => Dispatcher.BeginInvoke(ShowCommandPalette);
         _commandKeys.FocusModeRequested += () => Dispatcher.BeginInvoke(ToggleFocusMode);
         RegisterCommands();
+        InitializeStageSix();
+        InitializeStageSeven();
         InitializeView();
+        InitializeStageEight();
+        InitializeStageNine();
+        InitializeWindowChrome();
     }
 
     private void InitializeView()
@@ -89,10 +103,6 @@ public partial class MainWindow : Window
 
     private void RegisterCommands()
     {
-        _commands.Register(new CommandDescriptor { Id = "workbench.new", Title = "新建页", Category = "标签", Keywords = "new shell agent", ExecuteAsync = _ => { _tabs.ShowNewPage(); return Task.CompletedTask; } });
-        _commands.Register(new CommandDescriptor { Id = "workbench.settings", Title = "打开设置", Category = "设置", Keywords = "外观 快捷键 草稿", ExecuteAsync = _ => { ShowSettings(); return Task.CompletedTask; } });
-        _commands.Register(new CommandDescriptor { Id = "workbench.focus", Title = "切换专注模式", Category = "视图", Keywords = "focus Ctrl+Shift+F11", ExecuteAsync = _ => { ToggleFocusMode(); return Task.CompletedTask; } });
-        _commands.Register(new CommandDescriptor { Id = "workbench.performance", Title = "切换一键性能模式", Category = "视图", Keywords = "performance 极光 透明 模糊 动效", ExecuteAsync = _ => { TogglePerformanceMode(); return Task.CompletedTask; } });
         _commands.Register(() => _tabs.Tabs.Select(tab => new CommandDescriptor
         {
             Id = $"tab.activate.{tab.TabId:N}",
@@ -127,24 +137,20 @@ public partial class MainWindow : Window
         _attachedTab = tab;
         _attachedSessionId = tab.Session?.Id;
         _settingsVisible = false;
-        NewPage.Visibility = tab.IsNewPage ? Visibility.Visible : Visibility.Collapsed;
-        SettingsPanel.Visibility = Visibility.Collapsed;
-        TerminalPanel.Visibility = tab.IsNewPage ? Visibility.Collapsed : Visibility.Visible;
-        MotionPolicy.Show(tab.IsNewPage ? NewPage : TerminalPanel, _visuals.AnimationsEnabled);
+        ShowActiveWorkbench();
         Title = $"ArkTerminal · {tab.Title}";
         if (!tab.IsNewPage && tab.Session is not null && tab.Launch is not null)
         {
             PlaceholderPanel.Visibility = Visibility.Collapsed;
             TerminalView.Visibility = Visibility.Visible;
-            TerminalView.Attach(tab.Session, tab.Launch.FontOptions, tab.ScrollbackOffset);
-            if (tab.ZoomFontSize is { } size)
-            {
-                TerminalView.ApplyFontOptions(tab.Launch.FontOptions with { FontSize = size });
-            }
+            TerminalView.Attach(tab.Session, EffectiveFont(tab), tab.ScrollbackOffset);
+            TerminalView.SetFontBaseline(EffectiveFont(tab), tab.ZoomFontSize);
+            UpdateAuxiliaryDisplay();
             _initializing = true;
             SearchInput.Text = tab.SearchQuery;
             _initializing = false;
-            SearchPanel.Visibility = string.IsNullOrEmpty(tab.SearchQuery) ? Visibility.Collapsed : Visibility.Visible;
+            if (string.IsNullOrEmpty(tab.SearchQuery)) MotionPolicy.Hide(SearchPanel, false);
+            else MotionPolicy.Show(SearchPanel, false);
             if (!string.IsNullOrEmpty(tab.SearchQuery))
             {
                 _ = RestoreSearchAsync(tab.SearchQuery);
@@ -155,7 +161,7 @@ public partial class MainWindow : Window
         {
             TerminalView.Visibility = Visibility.Collapsed;
             PlaceholderPanel.Visibility = Visibility.Visible;
-            SearchPanel.Visibility = Visibility.Collapsed;
+            MotionPolicy.Hide(SearchPanel, false);
         }
         UpdateActiveStatus();
         TabCountText.Text = $"{_tabs.Tabs.Count} 个标签";
@@ -168,6 +174,21 @@ public partial class MainWindow : Window
         });
     }
 
+    private void ShowActiveWorkbench()
+    {
+        if (_tabs.ActiveTab.IsNewPage)
+        {
+            MotionPolicy.Show(NewPage);
+            MotionPolicy.Hide(TerminalPanel);
+        }
+        else
+        {
+            MotionPolicy.Show(TerminalPanel);
+            MotionPolicy.Hide(NewPage);
+        }
+        MotionPolicy.Hide(SettingsPanel);
+    }
+
     private void UpdateActiveStatus()
     {
         var tab = _tabs.ActiveTab;
@@ -176,6 +197,9 @@ public partial class MainWindow : Window
         TerminalStatusText.Text = tab.IsNewPage ? string.Empty : $"{tab.StatusText} · {tab.ProfileName}";
         PlaceholderTitle.Text = tab.Title;
         PlaceholderDetails.Text = $"{tab.StatusText}\n{tab.WorkingDirectory}\n启动前不会执行启动后输入，也不会触发 UAC。";
+        if (!string.IsNullOrEmpty(tab.Error)) PlaceholderDetails.Text += "\n" + tab.Error;
+        UpdateWorkbenchChrome();
+        UpdateShellDisplay();
     }
 
     private async Task RestoreSearchAsync(string query)
@@ -188,7 +212,7 @@ public partial class MainWindow : Window
     {
         tab.ScrollbackOffset = TerminalView.CurrentSnapshot?.ScrollbackOffset ?? tab.ScrollbackOffset;
         tab.SearchQuery = SearchInput.Text;
-        tab.ZoomFontSize = TerminalView.CurrentFontSize;
+        tab.ZoomFontSize = TerminalView.HasUserZoom ? TerminalView.CurrentFontSize : null;
     }
 
     private void DetachTab(TabViewModel tab)
@@ -207,13 +231,20 @@ public partial class MainWindow : Window
     {
         try
         {
-            var launch = TabLaunchConfiguration.FromProfile(profile, ExpandHome(workingDirectory), _host.FormalSettings?.Appearance);
+            var directory = _directoryExplicit ? workingDirectory : profile.AgentRecipe?.WorkingDirectory ?? profile.WorkingDirectory;
+            var launch = TabLaunchConfiguration.FromProfile(profile, ExpandHome(directory), _host.FormalSettings?.Appearance, _directoryExplicit,
+                isTransientAgent: profile.AgentRecipe is not null && _host.Catalog?.Profiles.Any(item => item.Id == profile.Id) != true);
+            if (profile.AgentRecipe is null)
+            {
+                var readiness = await Task.Run(() => ArkTerminal.Terminal.Sessions.Windows.LaunchPathInspector.Inspect(launch.Request));
+                if (!readiness.Ready) { StatusText.Text = readiness.Message; return; }
+            }
             _settingsVisible = false;
             var tab = await _tabs.LaunchAsync(launch);
             if (tab.State == TabRuntimeState.Running)
             {
                 await AddRecentAsync(launch.WorkingDirectory);
-                StatusText.Text = $"已启动 {profile.Name}。";
+                StatusText.Text = $"已启动 {profile.Name}。" + (profile.AgentRecipe is null ? tab.Session?.ShellStatus.Detail : string.Empty);
             }
             else
             {
@@ -222,6 +253,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            _host.Diagnostics.Record(ArkTerminal.Core.Diagnostics.DiagnosticComponent.Terminal, ArkTerminal.Core.Diagnostics.DiagnosticEventKind.StartFailed, exception.HResult);
             StatusText.Text = $"启动失败：{exception.Message}";
         }
     }
@@ -263,7 +295,22 @@ public partial class MainWindow : Window
         {
             return;
         }
-        await _tabs.RestartAsync(tab);
+        if (tab.Launch.IsTransientAgent)
+        {
+            await _tabs.RestartAsync(tab, tab.Launch.Clone());
+            AttachActiveTab();
+            return;
+        }
+        var profile = _host.Catalog?.Profiles.FirstOrDefault(item => item.Id == tab.Launch.Request.ProfileId);
+        if (profile is null) { StatusText.Text = "Profile 已删除，请在新建页重新选择。"; return; }
+        var directory = tab.Launch.WorkingDirectoryIsExplicit ? tab.WorkingDirectory : ExpandHome(profile.AgentRecipe?.WorkingDirectory ?? profile.WorkingDirectory);
+        var replacement = TabLaunchConfiguration.FromProfile(profile, directory, _host.FormalSettings?.Appearance, tab.Launch.WorkingDirectoryIsExplicit);
+        if (profile.AgentRecipe is null)
+        {
+            var readiness = await Task.Run(() => ArkTerminal.Terminal.Sessions.Windows.LaunchPathInspector.Inspect(replacement.Request));
+            if (!readiness.Ready) { StatusText.Text = readiness.Message; return; }
+        }
+        await _tabs.RestartAsync(tab, replacement);
         AttachActiveTab();
     }
 
@@ -292,9 +339,7 @@ public partial class MainWindow : Window
         if (_attachedTab == _tabs.ActiveTab)
         {
             AttachActiveTab();
-            NewPage.Visibility = Visibility.Visible;
-            TerminalPanel.Visibility = Visibility.Collapsed;
-            SettingsPanel.Visibility = Visibility.Collapsed;
+            ShowActiveWorkbench();
         }
     }
 
@@ -303,6 +348,12 @@ public partial class MainWindow : Window
         if (sender is FrameworkElement { DataContext: TabViewModel tab })
         {
             _tabs.Activate(tab);
+            if (_settingsVisible && tab == _tabs.ActiveTab)
+            {
+                _settingsVisible = false;
+                ShowActiveWorkbench();
+                if (tab.Session is not null) TerminalView.FocusInput();
+            }
             if (e.ClickCount == 1)
             {
                 (sender as FrameworkElement)?.BringIntoView();
@@ -350,9 +401,27 @@ public partial class MainWindow : Window
     private void RenameTab_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: TabViewModel tab } || tab.IsNewPage) return;
-        var input = new TextBox { Text = tab.FixedTitle ?? string.Empty, Width = 320, Margin = new Thickness(0, 0, 0, 10) };
-        var dialog = new Window { Owner = this, Title = "固定标签名称（留空清除）", Width = 380, Height = 160, WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = input };
-        input.KeyDown += (_, args) => { if (args.Key == Key.Enter) { _tabs.Rename(tab, input.Text); dialog.Close(); } else if (args.Key == Key.Escape) dialog.Close(); };
+        var input = new TextBox { Text = tab.FixedTitle ?? string.Empty, Margin = new Thickness(0, 12, 0, 16) };
+        var panel = new StackPanel { Margin = new Thickness(20) };
+        panel.Children.Add(new TextBlock { Text = "标签名称", FontSize = 18, FontWeight = FontWeights.SemiBold });
+        panel.Children.Add(new TextBlock { Text = "留空将恢复 Shell 标题。", Margin = new Thickness(0, 6, 0, 0) });
+        panel.Children.Add(input);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var save = new Button { Content = "保存", Style = (Style)FindResource("PrimaryButton"), IsDefault = true };
+        var cancel = new Button { Content = "取消", IsCancel = true };
+        actions.Children.Add(save);
+        actions.Children.Add(cancel);
+        panel.Children.Add(actions);
+        var frame = new Controls.RoundedBorder { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), Child = panel };
+        frame.SetResourceReference(Border.BackgroundProperty, "Theme.CardBackground");
+        frame.SetResourceReference(Border.BorderBrushProperty, "Theme.BorderBrush");
+        var dialog = new Window { Owner = this, Title = "标签名称", Width = 420, SizeToContent = SizeToContent.Height,
+            WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false,
+            Background = (Brush)FindResource("Theme.CardBackground"), FontFamily = FontFamily, FontSize = FontSize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = frame };
+        WindowChrome.SetWindowChrome(dialog, new WindowChrome { CaptionHeight = 44, ResizeBorderThickness = new Thickness(0), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(24), UseAeroCaptionButtons = false });
+        save.Click += (_, _) => { _tabs.Rename(tab, input.Text); dialog.Close(); };
+        dialog.Loaded += (_, _) => { MotionPolicy.Show(frame); input.Focus(); input.SelectAll(); };
         dialog.ShowDialog();
     }
 
@@ -446,7 +515,7 @@ public partial class MainWindow : Window
                 }
                 try
                 {
-                    var launch = TabLaunchConfiguration.FromProfile(profile, ExpandHome(state.WorkingDirectory), _host.FormalSettings?.Appearance);
+                    var launch = TabLaunchConfiguration.FromProfile(profile, ExpandHome(state.WorkingDirectory), _host.FormalSettings?.Appearance, state.WorkingDirectoryIsExplicit ?? true);
                     var tab = _tabs.AddPlaceholder(launch, state.Title, recovered: true);
                     if (state.Id == _host.Recovery.ActiveTabId) _tabs.Activate(tab);
                 }
@@ -460,6 +529,8 @@ public partial class MainWindow : Window
         RecoveryPanel.Visibility = Visibility.Collapsed;
         LoadSettingsControls(_host.Draft?.Settings ?? _host.FormalSettings);
         UpdateDraftControls();
+        RestoreSettingsEditor();
+        _profileEditor.Reload();
         ScheduleLayoutSave();
     }
 
@@ -498,59 +569,17 @@ public partial class MainWindow : Window
     {
         if (_focusMode) return;
         _settingsVisible = true;
-        NewPage.Visibility = Visibility.Collapsed;
-        TerminalPanel.Visibility = Visibility.Collapsed;
-        SettingsPanel.Visibility = Visibility.Visible;
         LoadSettingsControls(_host.Draft?.Settings ?? _host.FormalSettings);
+        RestoreSettingsEditor();
+        _profileEditor.Reload();
         UpdateDraftControls();
-        MotionPolicy.Show(SettingsPanel, _visuals.AnimationsEnabled);
+        UpdateWorkbenchChrome();
+        MotionPolicy.Hide(NewPage);
+        MotionPolicy.Hide(TerminalPanel);
+        MotionPolicy.Show(SettingsPanel);
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings();
-
-    private void LoadSettingsControls(AppSettings? settings)
-    {
-        if (settings is null) return;
-        _initializing = true;
-        FontSizeInput.Text = settings.Appearance.UiFontSize.ToString(CultureInfo.InvariantCulture);
-        FontSize = settings.Appearance.UiFontSize;
-        SelectTaggedItem(TabPositionInput, settings.Workbench.TabPosition.ToString());
-        ConfirmCloseInput.IsChecked = settings.Workbench.ConfirmCloseRunning;
-        HotkeyEnabledInput.IsChecked = settings.Workbench.CommandPaletteHotkeyEnabled;
-        HotkeyInput.Text = settings.Workbench.CommandPaletteHotkey;
-        var visual = settings.Appearance.Visual;
-        SelectTaggedItem(ThemeInput, visual.Theme.ToString());
-        SelectTaggedItem(MaterialInput, visual.Material.ToString());
-        DesktopBackgroundInput.IsChecked = visual.DesktopBackgroundEnabled;
-        AuroraEnabledInput.IsChecked = visual.AuroraEnabled;
-        SelectTaggedItem(AuroraPresetInput, visual.AuroraPresetId);
-        AuroraColorsInput.Text = string.Join(", ", visual.AuroraCustomColors);
-        _previewBackgroundPath = visual.BackgroundImagePath;
-        BackgroundPathText.Text = string.IsNullOrEmpty(_previewBackgroundPath) ? "未设置" : Path.GetFileName(_previewBackgroundPath);
-        BackgroundOverlayInput.Value = visual.BackgroundOverlayOpacity;
-        BackgroundBlurInput.Value = visual.BackgroundBlurRadius;
-        BackgroundBrightnessInput.Value = visual.BackgroundBrightness;
-        BackgroundSaturationInput.Value = visual.BackgroundSaturation;
-        SelectTaggedItem(BackgroundFitInput, visual.BackgroundFit.ToString());
-        SelectTaggedItem(BackgroundPositionInput, visual.BackgroundPosition.ToString());
-        TerminalOpacityInput.Value = visual.TerminalBackgroundOpacity;
-        _initializing = false;
-        ApplyTabPosition(settings.Workbench.TabPosition);
-        _visuals.Apply(settings.Appearance);
-        VisualCapabilityText.Text = _visuals.CapabilityText;
-    }
-
-    private void UpdateDraftControls()
-    {
-        var editing = _host.Draft is not null;
-        FontSizeInput.IsEnabled = editing;
-        VisualSettingsControls.IsEnabled = editing;
-        MaterialInput.IsEnabled = editing && _visuals.SupportsSystemBackdrop;
-        DesktopBackgroundInput.IsEnabled = editing && _visuals.SupportsDesktopBackground;
-        SaveDraftButton.IsEnabled = editing;
-        CancelDraftButton.IsEnabled = editing;
-        EditDraftButton.IsEnabled = _host.CanEdit && !editing;
-    }
 
     private static void SelectTaggedItem(ComboBox comboBox, string tag)
     {
@@ -566,66 +595,12 @@ public partial class MainWindow : Window
 
     private static string GetTag(ComboBox comboBox) => (comboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? string.Empty;
 
-    private async void EditDraftButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ShowResult(await _host.BeginDraftAsync(), "草稿已创建；修改将自动保存到独立恢复文件。")) UpdateDraftControls();
-    }
-
-    private void FontSizeInput_TextChanged(object sender, TextChangedEventArgs e) => PreviewDraft();
     private void WorkbenchInput_Changed(object sender, RoutedEventArgs e) => PreviewDraft();
     private void VisualInput_Changed(object sender, RoutedEventArgs e) => PreviewDraft();
 
-    private void PreviewDraft()
-    {
-        if (_initializing || _host.Draft is null) return;
-        if (!double.TryParse(FontSizeInput.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var size) || size is < 6 or > 96 || TabPositionInput.SelectedItem is not ComboBoxItem position)
-        {
-            StatusText.Text = "请输入有效设置后再保存。";
-            return;
-        }
-        var preview = _host.Draft.Settings.DeepClone();
-        preview.Appearance.UiFontSize = size;
-        preview.Workbench.TabPosition = Enum.Parse<TerminalTabPosition>((string)position.Tag);
-        preview.Workbench.ConfirmCloseRunning = ConfirmCloseInput.IsChecked == true;
-        preview.Workbench.CommandPaletteHotkeyEnabled = HotkeyEnabledInput.IsChecked == true;
-        preview.Workbench.CommandPaletteHotkey = HotkeyInput.Text;
-        var visual = preview.Appearance.Visual;
-        visual.Theme = Enum.Parse<AppThemeMode>(GetTag(ThemeInput));
-        if (_visuals.SupportsSystemBackdrop)
-        {
-            visual.Material = Enum.Parse<WindowMaterialMode>(GetTag(MaterialInput));
-        }
-        if (_visuals.SupportsDesktopBackground)
-        {
-            visual.DesktopBackgroundEnabled = DesktopBackgroundInput.IsChecked == true;
-        }
-        visual.AuroraEnabled = AuroraEnabledInput.IsChecked == true;
-        visual.AuroraPresetId = GetTag(AuroraPresetInput);
-        visual.AuroraCustomColors = AuroraColorsInput.Text.Split([',', ';', '，'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
-        visual.BackgroundImagePath = _previewBackgroundPath;
-        visual.BackgroundOverlayOpacity = BackgroundOverlayInput.Value;
-        visual.BackgroundBlurRadius = BackgroundBlurInput.Value;
-        visual.BackgroundBrightness = BackgroundBrightnessInput.Value;
-        visual.BackgroundSaturation = BackgroundSaturationInput.Value;
-        visual.BackgroundFit = Enum.Parse<BackgroundImageFit>(GetTag(BackgroundFitInput));
-        visual.BackgroundPosition = Enum.Parse<BackgroundImagePosition>(GetTag(BackgroundPositionInput));
-        visual.TerminalBackgroundOpacity = TerminalOpacityInput.Value;
-        var validation = ConfigurationValidator.ValidateSettings(preview);
-        if (!validation.IsValid)
-        {
-            StatusText.Text = validation.Summary;
-            return;
-        }
-        _host.UpdateDraft(preview);
-        FontSize = size;
-        ApplyTabPosition(preview.Workbench.TabPosition);
-        _visuals.Apply(preview.Appearance);
-        ScheduleDraftSave();
-    }
-
     private async void ImportBackground_Click(object sender, RoutedEventArgs e)
     {
-        if (_host.Draft is null) return;
+        if (!_host.CanEdit) return;
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "选择背景图（副本将保存到当前数据根）",
@@ -657,7 +632,7 @@ public partial class MainWindow : Window
 
     private void ClearBackground_Click(object sender, RoutedEventArgs e)
     {
-        if (_host.Draft is null) return;
+        if (!_host.CanEdit) return;
         _previewBackgroundPath = string.Empty;
         BackgroundPathText.Text = "未设置";
         BackgroundStatusText.Text = "预览已清除背景图；应用拥有的未引用副本将在保存或取消后清理。";
@@ -678,39 +653,43 @@ public partial class MainWindow : Window
         {
             await Task.Delay(_host.StorageOptions.DraftDebounceMilliseconds, token);
             var result = await _host.PersistDraftAsync();
-            if (!result.Success) StatusText.Text = result.Error;
+            if (!result.Success && !token.IsCancellationRequested) StatusText.Text = result.Error;
         }
         catch (OperationCanceledException) { }
     }
 
     private async void SaveDraftButton_Click(object sender, RoutedEventArgs e) => await SaveDraftAsync();
 
-    private async Task<bool> SaveDraftAsync()
+    private async Task<bool> SaveDraftCoreAsync()
     {
         CancelDraftDebounce();
-        PreviewDraft();
+        if (!PreviewDraft()) return false;
+        CancelDraftDebounce();
         if (_host.Draft is null) return false;
         var old = _host.FormalSettings!;
         var previousBackground = old.Appearance.Visual.BackgroundImagePath;
         var desired = _host.Draft.Settings.Workbench;
-        var changed = old.Workbench.CommandPaletteHotkeyEnabled != desired.CommandPaletteHotkeyEnabled || old.Workbench.CommandPaletteHotkey != desired.CommandPaletteHotkey;
-        if (changed && !_hotkey.Configure(desired.CommandPaletteHotkeyEnabled, desired.CommandPaletteHotkey, out var error))
+        if (!_hotkey.Configure(desired, out var error))
         {
             StatusText.Text = $"热键未更改：{error}";
             HotkeyStatusText.Text = _hotkey.StatusText;
+            ConfigureWindowFallback();
             return false;
         }
         var result = await _host.SaveFormalAsync();
         if (!result.Success)
         {
-            if (changed) _hotkey.Configure(old.Workbench.CommandPaletteHotkeyEnabled, old.Workbench.CommandPaletteHotkey, out _);
+            _hotkey.Configure(old.Workbench, out _);
+            ConfigureWindowFallback();
+            HotkeyStatusText.Text = _hotkey.StatusText;
             return ShowResult(result, string.Empty);
         }
         LoadSettingsControls(_host.FormalSettings);
         UpdateDraftControls();
         HotkeyStatusText.Text = _hotkey.StatusText;
         await CleanupBackgroundCopiesAsync(previousBackground);
-        return ShowResult(result, "正式设置已保存；草稿已清理。");
+        ConfigureWindowFallback();
+        return ShowResult(result, result.Warning ?? "正式设置已保存；草稿已清理。");
     }
 
     private async void CancelDraftButton_Click(object sender, RoutedEventArgs e) => await CancelDraftAsync();
@@ -750,13 +729,18 @@ public partial class MainWindow : Window
 
     private void ApplyTabPosition(TerminalTabPosition position)
     {
+        if (_tabLayoutInitialized && _tabPosition == position)
+        {
+            UpdateWorkbenchChrome();
+            return;
+        }
+        _tabLayoutInitialized = true;
         TabStrip.CancelDrag();
+        _tabPosition = position;
         var left = position == TerminalTabPosition.Left;
         TabHost.Width = double.NaN;
-        LeftTabColumn.Width = left ? new GridLength(280) : GridLength.Auto;
-        LeftTabColumn.MinWidth = left ? 180 : 0;
-        LeftTabColumn.MaxWidth = left ? 520 : double.PositiveInfinity;
-        LeftTabSplitter.Visibility = left ? Visibility.Visible : Visibility.Collapsed;
+        TabHost.Margin = left ? new Thickness(8, 8, 0, 0) : position == TerminalTabPosition.Bottom ? new Thickness(10, 8, 10, 0) : new Thickness(52, 5, 310, 5);
+        TabRailBackground.SetResourceReference(Border.BackgroundProperty, left ? "Theme.SidebarBackground" : "Theme.SurfaceBackground");
         Grid.SetRow(TabHost, left ? 2 : position == TerminalTabPosition.Bottom ? 3 : 0);
         Grid.SetColumn(TabHost, 0);
         Grid.SetColumnSpan(TabHost, left ? 1 : 3);
@@ -765,8 +749,8 @@ public partial class MainWindow : Window
         Grid.SetColumnSpan(TabScrollViewer, left ? 4 : 1);
         Grid.SetRow(TabNavigationButtons, 0);
         Grid.SetRow(NewTabButton, 0);
-        TabCountText.Visibility = left ? Visibility.Collapsed : Visibility.Visible;
-        TabScrollViewer.HorizontalScrollBarVisibility = left ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        TabCountText.Visibility = Visibility.Collapsed;
+        TabScrollViewer.HorizontalScrollBarVisibility = left ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Hidden;
         TabScrollViewer.VerticalScrollBarVisibility = left ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         TabStrip.OrientationEx = left ? Orientation.Vertical : Orientation.Horizontal;
         var factory = new FrameworkElementFactory(typeof(StackPanel));
@@ -777,9 +761,10 @@ public partial class MainWindow : Window
         containerStyle.Setters.Add(new Setter(VerticalContentAlignmentProperty, VerticalAlignment.Stretch));
         if (!left)
         {
-            containerStyle.Setters.Add(new Setter(WidthProperty, 180d));
+            containerStyle.Setters.Add(new Setter(WidthProperty, 210d));
         }
         TabStrip.ItemContainerStyle = containerStyle;
+        UpdateWorkbenchChrome();
     }
 
     private void FocusMode_Click(object sender, RoutedEventArgs e) => ToggleFocusMode();
@@ -793,13 +778,12 @@ public partial class MainWindow : Window
         }
         _lastFocusToggle = now;
         _focusMode = !_focusMode;
-        NavigationPanel.Visibility = _focusMode ? Visibility.Collapsed : Visibility.Visible;
         if (_focusMode)
         {
             _settingsVisible = false;
-            SettingsPanel.Visibility = Visibility.Collapsed;
-            if (_attachedTab?.IsNewPage == false) TerminalPanel.Visibility = Visibility.Visible;
+            ShowActiveWorkbench();
         }
+        UpdateWorkbenchChrome();
         if (_attachedTab?.Session is not null) TerminalView.FocusInput();
     }
 
@@ -816,7 +800,8 @@ public partial class MainWindow : Window
 
     private void UpdatePerformanceButton()
     {
-        PerformanceModeButton.Content = _visuals.PerformanceModeEnabled ? "退出性能模式" : "性能模式";
+        PerformanceModeButton.ToolTip = _visuals.PerformanceModeEnabled ? "退出性能模式" : "性能模式";
+        PerformanceModeButton.SetResourceReference(ForegroundProperty, _visuals.PerformanceModeEnabled ? "Theme.AccentBrush" : "Theme.SecondaryText");
     }
 
     private void Window_SourceInitialized(object? sender, EventArgs e)
@@ -825,11 +810,13 @@ public partial class MainWindow : Window
         _hotkey.Attach(source);
         _commandKeys.Attach(source);
         _visuals.Attach(source);
+        UpdateCaptionButtons();
         VisualCapabilityText.Text = _visuals.CapabilityText;
         var settings = _host.FormalSettings?.Workbench;
         if (settings is not null)
         {
-            _hotkey.Configure(settings.CommandPaletteHotkeyEnabled, settings.CommandPaletteHotkey, out var error);
+            _hotkey.Configure(settings, out var error);
+            ConfigureWindowFallback();
             HotkeyStatusText.Text = _hotkey.StatusText;
             if (!string.IsNullOrEmpty(error)) StatusText.Text = $"命令面板仍可从窗口按钮打开；{error}";
         }
@@ -839,11 +826,11 @@ public partial class MainWindow : Window
 
     private void ShowCommandPalette()
     {
+        if (DiagnosticPreviewPanel.Visibility == Visibility.Visible) return;
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Show();
         Activate();
-        CommandPalette.Visibility = Visibility.Visible;
-        MotionPolicy.Show(CommandPalette, _visuals.AnimationsEnabled, 12);
+        MotionPolicy.Show(CommandPalette);
         CommandInput.Text = string.Empty;
         RefreshCommands();
         CommandInput.Focus();
@@ -851,7 +838,7 @@ public partial class MainWindow : Window
 
     private void CloseCommandPalette()
     {
-        CommandPalette.Visibility = Visibility.Collapsed;
+        MotionPolicy.Hide(CommandPalette);
         if (_attachedTab?.Session is not null && !_settingsVisible) TerminalView.FocusInput();
     }
 
@@ -882,14 +869,17 @@ public partial class MainWindow : Window
 
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        var modifiers = Keyboard.Modifiers;
-        if (modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.Tab) { _tabs.Next(modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1); e.Handled = true; }
-        else if (modifiers.HasFlag(ModifierKeys.Control) && modifiers.HasFlag(ModifierKeys.Shift) && e.Key == Key.T) { _tabs.ShowNewPage(); e.Handled = true; }
-        else if (modifiers.HasFlag(ModifierKeys.Control) && modifiers.HasFlag(ModifierKeys.Shift) && e.Key == Key.W) { await CloseTabAsync(_tabs.ActiveTab); e.Handled = true; }
+        if (DiagnosticPreviewPanel.Visibility == Visibility.Visible) return;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var terminalFocused = TerminalView.IsVisible && TerminalView.IsInputFocused && !TerminalView.IsComposing;
+        var command = _commands.Match(key, Keyboard.Modifiers, terminalFocused);
+        if (command is null) return;
+        e.Handled = true;
+        await ExecuteCommandAsync(command);
     }
 
     private void ReturnBottom_Click(object sender, RoutedEventArgs e) => TerminalView.ScrollToBottom();
-    private void ShowSearch() { SearchPanel.Visibility = Visibility.Visible; MotionPolicy.Show(SearchPanel, _visuals.AnimationsEnabled, 4); SearchInput.Focus(); SearchInput.SelectAll(); }
+    private void ShowSearch() { MotionPolicy.Show(SearchPanel); SearchInput.Focus(); SearchInput.SelectAll(); }
 
     private async void SearchInput_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -908,7 +898,7 @@ public partial class MainWindow : Window
     private void SearchPrevious_Click(object sender, RoutedEventArgs e) { TerminalView.NavigateSearch(-1); UpdateSearchStatus(); }
     private void SearchNext_Click(object sender, RoutedEventArgs e) { TerminalView.NavigateSearch(1); UpdateSearchStatus(); }
     private void CloseSearch_Click(object sender, RoutedEventArgs e) => CloseSearch();
-    private async void CloseSearch() { SearchPanel.Visibility = Visibility.Collapsed; SearchInput.Text = string.Empty; await TerminalView.SearchAsync(string.Empty); UpdateSearchStatus(); TerminalView.FocusInput(); }
+    private async void CloseSearch() { MotionPolicy.Hide(SearchPanel); SearchInput.Text = string.Empty; await TerminalView.SearchAsync(string.Empty); UpdateSearchStatus(); TerminalView.FocusInput(); }
     private void UpdateSearchStatus() => SearchStatusText.Text = TerminalView.SearchMatchCount == 0 ? "无匹配" : $"{TerminalView.ActiveSearchMatch + 1}/{TerminalView.SearchMatchCount}";
 
     private async void ResetButton_Click(object sender, RoutedEventArgs e)
@@ -938,18 +928,30 @@ public partial class MainWindow : Window
                 var completed = choice == MessageBoxResult.Yes ? await SaveDraftAsync() : await CancelDraftAsync();
                 if (!completed) return;
             }
+            if (_host.ProfilesDraft is not null)
+            {
+                var choice = MessageBox.Show(this, "存在未保存 Profile 草稿。保存、放弃，还是取消关闭？", "未保存 Profile", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                if (choice == MessageBoxResult.Cancel) return;
+                if (!(choice == MessageBoxResult.Yes ? await SaveProfilesWithLockAsync() : await _profileEditor.CancelAsync())) return;
+            }
             if (_host.FormalSettings?.Workbench.ConfirmCloseRunning == true && _tabs.RunningTabs.Any())
             {
                 if (MessageBox.Show(this, "仍有运行中的会话。关闭窗口将结束这些会话，是否继续？", "关闭 ArkTerminal", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             }
             _layoutDebounce?.Cancel();
             _detectCancellation?.Cancel();
+            await _agentPicker.StopAsync();
+            await _mcp.DisposeAsync();
             TabStrip.CancelDrag();
             _commandKeys.Dispose();
             _hotkey.Dispose();
             await _tabs.CloseAllAsync();
             var shutdown = await _host.ShutdownAsync();
             if (!ShowResult(shutdown, string.Empty)) return;
+            _profileEditor.Dispose();
+            _performanceTimer.Stop();
+            FontPreview.Detach();
+            _profileEditor.FontPreview.Detach();
             _visuals.Dispose();
             _allowClose = true;
             Close();
@@ -966,7 +968,7 @@ public partial class MainWindow : Window
 
     private bool ShowResult(DocumentSaveResult result, string successMessage)
     {
-        if (!result.Success) { StatusText.Text = result.Error ?? "操作失败。"; return false; }
+        if (!result.Success) { _host.Diagnostics.Record(ArkTerminal.Core.Diagnostics.DiagnosticComponent.Configuration, ArkTerminal.Core.Diagnostics.DiagnosticEventKind.WriteFailed); StatusText.Text = result.Error ?? "操作失败。"; return false; }
         if (!string.IsNullOrEmpty(successMessage)) StatusText.Text = successMessage;
         return true;
     }
