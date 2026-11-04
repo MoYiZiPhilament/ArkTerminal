@@ -2,7 +2,16 @@
 
 更新日期：2026-11-04（Asia/Shanghai）。本表依据当前源码、`AGENTS.md` 的历史验收记录及本次仓库检查整理。
 
-**当前结论：阶段 1–9 已有实现；阶段 10 已实施本机修复、测量和双格式本地预览打包，最终发行验收未通过。** MSIX 安装 / 包身份下 MCP 与 UAC、干净 Windows 环境、物理输入和长期资源验收仍阻塞完整交付。本轮改动位于 `codex/stage10-validation`，没有 commit、push 或对外发布。
+**当前结论：阶段 1–9 已有实现；阶段 10 已实施本机修复、测量和双格式预览打包，最终发行验收未通过。** 当前预发布版本为 `0.1.1a-preview`。MSIX 安装 / 包身份下 MCP 与 UAC、干净 Windows 环境、物理输入和长期资源验收仍阻塞完整交付。
+
+## 0.1.1a-preview 预发布
+
+- 按用户要求采用最后选定的 Camellia 俯视 PNG，原图字节保留于 `Assets/AppIcon.png`，蓝色背景与透明圆角保留；ICO 提供 16–256 像素的 9 档尺寸，exe、WPF 窗口与 MSIX 图标统一使用该图。
+- 显示版本 / Release 为 `0.1.1a-preview`，NuGet 兼容版本为 `0.1.1-a-preview`，程序集 / 文件 / MSIX 数字版本为 `0.1.1.0`。
+- 原阶段 10 工作先保存为 `75ed23d`，图标与版本另行提交；沿用 `codex/stage10-validation` 开发分支，以 fast-forward 合入并同步 `main`，发行标签为 `v0.1.1a-preview`。
+- 本轮 Debug / Release 锁定构建与自包含 publish 通过，0 警告 / 0 错误；WPF 生产窗口的图标资源 / 版本 / 新建页检查通过。实际 ZIP 在中文 / 空格目录及无效 `DOTNET_ROOT` 下正常启动、正常退出，CLR / WPF 原生模块来自包内，新建页没有子进程，退出清理 marker。
+- 两包 19 项结构 / 许可 / 隔离 / MSIX 签名检查通过，MSIX 全部 627 个文件 / 3,920 个 SHA-256 块核验通过；开发签名只验证密码学与发布者匹配，未建立信任或安装。该轮临时证据位于 `C:\Users\1\.codex\visualizations\2026\11\04\01a1a470-aaff-7c53-8126-182588548178`。
+- [GitHub 预发布](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v0.1.1a-preview)提供自包含便携 ZIP、开发签名 MSIX、公开开发证书、分发元数据与 SHA-256 清单。推荐 ZIP 试用，MSIX 仅供隔离开发验证。发布预览不改变下文已有的验收缺口。
 
 ## 阶段总览
 
@@ -23,7 +32,7 @@
 
 ## 阶段 10 本轮结果
 
-- 版本 `0.1.0-preview.1` / 包版本 `0.1.0.0`，x64，自包含 .NET / WindowsDesktop `10.0.11`。具体生成和维护方式见 [Packaging/README.md](Packaging/README.md)。清单的 17763 是技术下限候选，尚无该版本实机验收。
+- 阶段 10 最初测量版本为 `0.1.0-preview.1` / 包版本 `0.1.0.0`，x64，自包含 .NET / WindowsDesktop `10.0.11`。具体生成和维护方式见 [Packaging/README.md](Packaging/README.md)。清单的 17763 是技术下限候选，尚无该版本实机验收。
 - Windows 11 `26300.9711`、SDK `10.0.400`。本轮 Debug 与 Release 的锁定构建均为退出码 0、0 警告 / 0 错误；本轮结果与早期记录分开。
 - 重跑 Unicode / VT / 搜索复制 5,422 项；配置 / 诊断 47 项；Shell / 链接 / 记录 / 通知策略 461 项；Agent 216 + 17 项；上下文 / MCP 196 项，解压目录再跑 196 项；故障与预算 15 项；四 Shell 8 组交互 / resize / 退出；20 标签与 100 次会话循环的 19 项检查通过。独立 GPU 探针完成 301 次绘制 / reset / cancel / 恢复，受控前缓冲恢复通过。它们不替代物理 IME、UAC、硬件移除或包身份验收。
 - Release 的 20 个 CMD 会话创建到回显均值约 102 ms；60 次三位置切换到 Render 优先级均值 43 ms、P95 52 ms。两会话各 20,000 行输出时，极光开 / 关 / 性能模式约 1.89 / 2.54 / 2.82 MiB/s，样本约 3.30 / 2.49 / 2.27 秒。条件为 150% DPI、Cascadia Mono 14 DIP、1180×800 DIP 窗口，默认硬件渲染；未清空文件缓存，非物理按键延迟测量。

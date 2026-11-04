@@ -5,7 +5,7 @@
         xmlns:rendering="clr-namespace:ArkTerminal.Rendering"
         xmlns:controls="clr-namespace:ArkTerminal.Controls"
         xmlns:visuals="clr-namespace:ArkTerminal.Visuals"
-        Title="ArkTerminal · 新建" Width="1180" Height="800" MinWidth="720" MinHeight="520"
+        Title="ArkTerminal · 新建" Icon="Assets/AppIcon.ico" Width="1180" Height="800" MinWidth="720" MinHeight="520"
         WindowStyle="None" ResizeMode="CanResize" UseLayoutRounding="True"
         Background="{DynamicResource Theme.WindowBackground}"
         Closing="Window_Closing" SourceInitialized="Window_SourceInitialized" PreviewKeyDown="Window_PreviewKeyDown">

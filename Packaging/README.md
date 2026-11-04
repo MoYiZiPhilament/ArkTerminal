@@ -1,6 +1,8 @@
 # ArkTerminal 本地分发与手动维护
 
-版本 `0.1.0-preview.1`，包版本 `0.1.0.0`。当前为本地验证预览，未通过最终发行验收。
+版本 `0.1.1a-preview`，包版本 `0.1.1.0`。当前为预发布版本，未通过最终发行验收。
+显示版本和发行标签使用 `0.1.1a-preview`，NuGet / .NET 构建版本使用兼容的
+`0.1.1-a-preview`，程序集与 MSIX 数字版本为 `0.1.1.0`。
 
 ## 工具链与生成
 
@@ -15,7 +17,7 @@ dotnet build ArkTerminal.sln -c Release -p:RestoreLockedMode=true
 pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.28000.0\x64' -DevelopmentSign
 ```
 
-默认输出 `bin/Packages/0.1.0-preview.1/`；已有同名产物时停止，可另传
+默认输出 `bin/Packages/0.1.1a-preview/`；已有同名产物时停止，可另传
 `-OutputDirectory`。脚本从干净暂存目录 publish，再生成 ZIP、MSIX、
 `distribution.json` 与 `SHA256SUMS.txt`，不包含本机 `data`、配置、PDB 之外的
 临时探针或签名私钥。MCP 位于 `Mcp` 子目录，提权辅助器使用同一

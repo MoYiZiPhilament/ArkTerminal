@@ -1,8 +1,10 @@
 <Project>
   <PropertyGroup>
-    <Version>0.1.0-preview.1</Version>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.0</FileVersion>
+    <Version>0.1.1-a-preview</Version>
+    <InformationalVersion>0.1.1a-preview</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <AssemblyVersion>0.1.1.0</AssemblyVersion>
+    <FileVersion>0.1.1.0</FileVersion>
     <RuntimeFrameworkVersion>10.0.11</RuntimeFrameworkVersion>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishAot>false</PublishAot>

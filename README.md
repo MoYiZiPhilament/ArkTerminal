@@ -1,8 +1,10 @@
 # ArkTerminal
 
+<img src="Assets/AppIcon.png" alt="ArkTerminal Camellia 图标" width="96" height="96" />
+
 面向 Windows 的原生 WPF Shell / Agent 工作台，使用 ConPTY 驱动真实终端进程，以 DirectWrite 和 Direct3D 共享表面绘制终端内容。
 
-当前已实现阶段 1–9，并完成阶段 10 的本机缺陷修复、性能测量和双格式本地预览打包。版本为 `0.1.0-preview.1`，尚未通过最终发行验收：MSIX 隔离安装及其 MCP / UAC、Windows 10、跨显示器、物理输入与长期资源验收仍有缺口。完整状态见 [项目进度](PROGRESS.md)。
+当前已实现阶段 1–9，并完成阶段 10 的本机缺陷修复、性能测量和双格式本地预览打包。版本为 `0.1.1a-preview`，尚未通过最终发行验收：MSIX 隔离安装及其 MCP / UAC、Windows 10、跨显示器、物理输入与长期资源验收仍有缺口。完整状态见 [项目进度](PROGRESS.md)。
 
 ## 现有功能
 
@@ -38,7 +40,12 @@ dotnet run --project ArkTerminal.csproj -c Release --no-build -- --portable
 
 标准模式的数据根为 `%APPDATA%\ArkTerminal`；便携模式的数据根为可执行文件目录下的 `data`，也可通过同目录的 `portable.flag` 启用。两种模式的数据相互隔离。真实 MSIX 包的安装与权限验收仍待完成，包身份下管理员启动保持禁用。
 
-## 本地分发预览
+## 预发布下载与打包
+
+[GitHub Release：0.1.1a-preview](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v0.1.1a-preview)。
+日常试用请选择 `win-x64-portable.zip`，完整解压至可写目录后运行 `ArkTerminal.exe`。
+本版本使用用户选定的 Camellia 俯视图作为 exe、窗口和 MSIX 图标，保留蓝色背景及透明圆角。
+MSIX 为开发签名测试附件，默认不受系统信任，安装和权限验证仍未完成。
 
 `Packaging/Build-Packages.ps1` 生成自包含 `win-x64` 便携 ZIP 和 full-trust MSIX，
 随包携带 .NET / WindowsDesktop 10.0.11、MCP 桥、许可及使用说明。
@@ -49,7 +56,7 @@ dotnet run --project ArkTerminal.csproj -c Release --no-build -- --portable
 pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.28000.0\x64' -DevelopmentSign
 ```
 
-默认输出 `bin/Packages/0.1.0-preview.1/`，其中的 `SHA256SUMS.txt` 可用于核对。
+默认输出 `bin/Packages/0.1.1a-preview/`，其中的 `SHA256SUMS.txt` 可用于核对。
 开发 MSIX 使用临时生成的自签证书，默认不受系统信任；脚本不安装应用或导入证书。
 ZIP 内 exe 没有 Authenticode 签名。MSIX 的 MCP 配置入口和管理员会话目前仍不可用，
 完整 MSIX 发行验收被阻塞。数据目录、备份、手动替换升级、卸载、签名条件及工具链

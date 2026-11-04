@@ -1,5 +1,14 @@
 # ArkTerminal 实施交接
 
+## 0.1.1a-preview 图标与 GitHub 预发布（2026-11-04）
+
+- 用户明确授权使用参考对话最后的俯视图作为应用图标，更新为 `0.1.1a-preview`，提交、同步 GitHub 并创建 Release。本轮发布为 GitHub prerelease，不代表阶段 10 最终验收通过。
+- 原图由用户提供本地路径，字节保留于 `Assets/AppIcon.png`，SHA-256 为 `4809cd611109a7d28a5bf60e7062ac626a4a13c6ba757b5f56bbfec20d4f10a9`。只转换尺寸 / 格式，未重新生成或修改图案；exe 使用九尺寸 ICO，窗口嵌入同一 ICO，MSIX 从同一 PNG 生成透明图标。
+- `Directory.Build.props` 的 `Version=0.1.1-a-preview` 满足 NuGet 格式，`InformationalVersion=0.1.1a-preview` 用于显示与包文件名，数字版本为 `0.1.1.0`；运行时与第三方依赖版本未更改，锁文件中的项目引用版本同步更新。
+- 阶段 10 原有工作保存为独立提交 `75ed23d`，后续图标 / 版本另行提交。使用普通 fast-forward 同步 `main` 和标签 `v0.1.1a-preview`，不改写历史。正式 Release 下载入口见 README / PROGRESS。
+- 本轮 Debug / Release 锁定构建、自包含 publish、实际 WPF 图标加载、正式便携 exe 中文 / 空格路径启动与正常退出通过；新建页无子进程，模块来自随包运行时。两包 19 项核验、MSIX 627 文件 / 3,920 个块与开发签名密码学检查通过。临时证据在 `C:\Users\1\.codex\visualizations\2026\11\04\01a1a470-aaff-7c53-8126-182588548178`。
+- MSIX 继续使用临时开发证书，未导入信任、未实际安装，包身份下 MCP / UAC 仍不可用；阶段 10 下列跨平台、物理输入、长期资源与真实 CLI 模型任务的待验边界保留。以下“没有 commit / push / 对外发布”按各历史轮次理解。
+
 ## 进度与版本管理（2026-11-04）
 
 - 面向仓库读者的功能 / 构建入口见 `README.md`，阶段总览、验证边界、待办与提交关系见 `PROGRESS.md`。下文保留各工作轮次的历史证据，早期“下一阶段未实现 / 未提交”的状态按当时日期理解，当前范围以本节与“当前状态”为准。

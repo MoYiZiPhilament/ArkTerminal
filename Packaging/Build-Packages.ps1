@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = Split-Path -Parent $PSScriptRoot
 [xml]$versionProps = Get-Content -LiteralPath (Join-Path $repo 'Directory.Build.props') -Raw
-$version = [string]$versionProps.Project.PropertyGroup.Version
+$version = [string]$versionProps.Project.PropertyGroup.InformationalVersion
 $packageVersion = [string]$versionProps.Project.PropertyGroup.FileVersion
 $runtimeVersion = [string]$versionProps.Project.PropertyGroup.RuntimeFrameworkVersion
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo "bin\Packages\$version" }
@@ -72,19 +72,20 @@ function Add-Licenses([string]$Destination) {
 function New-PackageLogos([string]$Destination) {
     Add-Type -AssemblyName System.Drawing.Common
     New-Item -ItemType Directory -Path $Destination -Force | Out-Null
-    foreach ($logo in @(@('StoreLogo.png', 50), @('Square44x44Logo.png', 44), @('Square150x150Logo.png', 150))) {
-        $size = [int]$logo[1]
-        $bitmap = [Drawing.Bitmap]::new($size, $size)
-        $graphics = [Drawing.Graphics]::FromImage($bitmap)
-        $font = [Drawing.Font]::new('Consolas', [single]($size * 0.42), [Drawing.FontStyle]::Bold, [Drawing.GraphicsUnit]::Pixel)
-        $brush = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(90, 220, 220))
-        try {
-            $graphics.Clear([Drawing.Color]::FromArgb(16, 32, 52))
-            $graphics.TextRenderingHint = [Drawing.Text.TextRenderingHint]::AntiAliasGridFit
-            $graphics.DrawString('>_', $font, $brush, [single]($size * 0.12), [single]($size * 0.23))
-            $bitmap.Save((Join-Path $Destination $logo[0]), [Drawing.Imaging.ImageFormat]::Png)
-        } finally { $brush.Dispose(); $font.Dispose(); $graphics.Dispose(); $bitmap.Dispose() }
-    }
+    $source = [Drawing.Image]::FromFile((Join-Path $repo 'Assets\AppIcon.png'))
+    try {
+        foreach ($logo in @(@('StoreLogo.png', 50), @('Square44x44Logo.png', 44), @('Square150x150Logo.png', 150))) {
+            $size = [int]$logo[1]
+            $bitmap = [Drawing.Bitmap]::new($size, $size)
+            $graphics = [Drawing.Graphics]::FromImage($bitmap)
+            try {
+                $graphics.Clear([Drawing.Color]::Transparent)
+                $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+                $graphics.DrawImage($source, 0, 0, $size, $size)
+                $bitmap.Save((Join-Path $Destination $logo[0]), [Drawing.Imaging.ImageFormat]::Png)
+            } finally { $graphics.Dispose(); $bitmap.Dispose() }
+        }
+    } finally { $source.Dispose() }
 }
 
 try {

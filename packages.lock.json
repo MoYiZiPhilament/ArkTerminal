@@ -76,7 +76,7 @@
       "arkterminal.terminal": {
         "type": "Project",
         "dependencies": {
-          "ArkTerminal.Core": "[0.1.0-preview.1, )"
+          "ArkTerminal.Core": "[0.1.1-a-preview, )"
         }
       }
     },

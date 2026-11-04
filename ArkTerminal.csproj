@@ -9,6 +9,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
         <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
@@ -20,6 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Resource Include="Assets\AppIcon.ico" />
         <ProjectReference Include="ArkTerminal.Core\ArkTerminal.Core.csproj" />
         <ProjectReference Include="ArkTerminal.Terminal\ArkTerminal.Terminal.csproj" />
         <ProjectReference Include="ArkTerminal.Mcp\ArkTerminal.Mcp.csproj" ReferenceOutputAssembly="false" Private="false" />
