@@ -104,7 +104,8 @@ try {
 
     Copy-Item -LiteralPath $publish -Destination $msix -Recurse
     [xml]$manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AppxManifest.xml') -Raw
-    $manifest.Package.Identity.Version = $packageVersion
+    # MSIX requires four numeric parts; product and project versions remain three-part.
+    $manifest.Package.Identity.Version = "$packageVersion.0"
     $manifest.Save((Join-Path $msix 'AppxManifest.xml'))
     New-PackageLogos (Join-Path $msix 'Assets')
     Invoke-Checked $makeAppx @('pack', '/d', $msix, '/p', $msixPath, '/o', '/h', 'SHA256')

@@ -251,7 +251,7 @@ public partial class MainWindow
         FontPreview.ApplyVisualStyle(TerminalView.VisualStyle);
         _profileEditor.FontPreview.AttachPreview(TerminalFontOptions.Resolve(appearance, _profileEditor.PreviewProfile));
         _profileEditor.FontPreview.ApplyVisualStyle(TerminalView.VisualStyle);
-        FontPreviewSource.Text = "全局终端字体预览；Profile 可覆盖字体/字号。按名称保存，实际字形以本机预览为准。只显示样例，不启动进程。";
+        FontPreviewSource.Text = "终端字体预览";
         if (_attachedTab?.Session is not null)
             TerminalView.SetFontBaseline(EffectiveFont(_attachedTab), TerminalView.HasUserZoom ? TerminalView.CurrentFontSize : null);
         UpdateAuxiliaryDisplay();

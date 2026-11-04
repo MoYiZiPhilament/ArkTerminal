@@ -106,7 +106,7 @@
                             <Border Width="48" Height="48" CornerRadius="14" Background="{DynamicResource Theme.ActiveTabBackground}" Margin="0,0,16,0">
                                 <TextBlock Text="&gt;_" FontFamily="Cascadia Mono, Consolas" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource Theme.AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <StackPanel><TextBlock Text="新建会话" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="选择 Shell、Profile 或 Agent，开始你的工作。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,4,0,0"/></StackPanel>
+                            <TextBlock Text="新建会话" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                         <Border x:Name="ErrorPanel" Padding="18" CornerRadius="12" Margin="0,0,0,16" Background="{DynamicResource Theme.ErrorBackground}" BorderBrush="{DynamicResource Theme.ErrorBorder}" BorderThickness="1">
                             <StackPanel><TextBlock Text="需要处理的问题" FontWeight="SemiBold"/><TextBlock x:Name="ErrorText" TextWrapping="Wrap" Margin="0,8"/><Button Content="备份后恢复无效文档默认值" Click="ResetButton_Click" HorizontalAlignment="Left"/></StackPanel>
@@ -116,8 +116,7 @@
                         </Border>
                         <Border Padding="20" CornerRadius="12" Margin="0,0,0,20" Background="{DynamicResource Theme.CardBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="工作目录" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,4"/>
-                                <TextBlock Text="为新会话选择起点，或沿用 Profile 的目录。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,0,0,14"/>
+                                <TextBlock Text="工作目录" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,14"/>
                                 <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBox x:Name="DirectoryInput" TextChanged="DirectoryInput_TextChanged" AutomationProperties.Name="工作目录" VerticalContentAlignment="Center" Margin="0,0,8,0"/>
                                     <Button Grid.Column="1" Content="浏览…" Click="BrowseDirectory_Click" Margin="0"/>
@@ -144,7 +143,7 @@
                         <Border Padding="20" CornerRadius="12" Margin="0,16,0,16" Background="{DynamicResource Theme.CardBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
                             <StackPanel>
                                 <DockPanel><Button DockPanel.Dock="Right" Content="清空" Click="ClearRecents_Click" Margin="0"/><TextBlock Text="最近项目" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
-                                <TextBlock x:Name="RecentsEmpty" Text="打开过的项目会显示在这里。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,12,0,0"/>
+                                <TextBlock x:Name="RecentsEmpty" Text="暂无最近项目" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,12,0,0"/>
                                 <ItemsControl x:Name="RecentsList"><ItemsControl.ItemTemplate><DataTemplate>
                                     <DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Right" Content="&#xE8BB;" Style="{StaticResource IconButton}" Tag="{Binding Path}" Click="RemoveRecent_Click" ToolTip="移除最近项目" AutomationProperties.Name="移除最近项目"/><Button Content="{Binding DisplayName}" Tag="{Binding Path}" Click="RecentProject_Click" ToolTip="{Binding Path}" HorizontalContentAlignment="Left"/></DockPanel>
                                 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
@@ -196,7 +195,7 @@
     </Style>
 </Grid.Resources>
 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-<StackPanel Margin="4,0,0,20"><TextBlock x:Name="SettingsSectionTitle" Text="外观" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="让工作台更适合你。修改会即时预览，保存后生效。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,6,0,0"/></StackPanel>
+<TextBlock x:Name="SettingsSectionTitle" Text="外观" FontSize="28" FontWeight="SemiBold" Margin="4,0,0,20"/>
 <TabControl x:Name="SettingsCategories" Grid.Row="1" TabStripPlacement="Left" SelectionChanged="SettingsCategory_Changed">
 <TabItem Header="外观" Tag="&#xE790;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}" Margin="0,0,0,16"><StackPanel><TextBlock Text="字体与排版" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/><StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="UI 字体" Width="180" VerticalAlignment="Center"/><TextBox x:Name="UiFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="UI 字号（6—96）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
@@ -208,8 +207,8 @@
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="强调色 #RRGGBB" Width="180" VerticalAlignment="Center"/><TextBox x:Name="AccentInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <CheckBox x:Name="LigaturesInput" Content="启用终端连字" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
 <CheckBox x:Name="TimestampsInput" Content="显示首次收到输出的时间戳" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<CheckBox x:Name="LineNumbersInput" Content="显示逻辑行号（不是命令编号）" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<CheckBox x:Name="DurationInput" Content="显示命令耗时（无可靠边界时为未知）" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<CheckBox x:Name="LineNumbersInput" Content="显示逻辑行号" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<CheckBox x:Name="DurationInput" Content="显示命令耗时" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
 <TextBlock x:Name="FontPreviewSource" Margin="0,4,0,4"/>
 <controls:RoundedBorder CornerRadius="10" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" Margin="0,0,0,12"><rendering:DirectWriteTerminalControl x:Name="FontPreview" Height="140" IsHitTestVisible="False"/></controls:RoundedBorder>
 </StackPanel></Border><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}">                        <StackPanel x:Name="VisualSettingsControls" Margin="0,0,0,12">
@@ -222,7 +221,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="极光预设" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="AuroraPresetInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="borealis · 青紫" Tag="borealis"/><ComboBoxItem Content="dawn · 晨曦" Tag="dawn"/><ComboBoxItem Content="ocean · 深海" Tag="ocean"/><ComboBoxItem Content="ember · 余烬" Tag="ember"/><ComboBoxItem Content="自定义" Tag="custom"/></ComboBox></StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="自定义色（3—6 个）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="AuroraColorsInput" Width="360" TextChanged="VisualInput_Changed"/></StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8"><Button Content="导入背景图" Click="ImportBackground_Click"/><Button Content="清除背景图" Click="ClearBackground_Click"/><TextBlock x:Name="BackgroundPathText" VerticalAlignment="Center" Foreground="{DynamicResource Theme.SecondaryText}"/></StackPanel>
-                            <TextBlock Text="亮度 / 饱和度 / 模糊只处理应用内静态背景图；系统 Mica/Acrylic 不提供这些任意参数。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,0,0,8"/>
+                            <TextBlock Text="模糊、亮度与饱和度仅用于应用内背景图。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,0,0,8"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景遮罩" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundOverlayInput" Width="260" Minimum="0" Maximum="0.85" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景模糊（DIP）" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundBlurInput" Width="260" Minimum="0" Maximum="24" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景亮度" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundBrightnessInput" Width="260" Minimum="0.5" Maximum="1.5" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
@@ -240,9 +239,9 @@
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="专注模式热键" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FocusHotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 
 <TextBlock x:Name="HotkeyStatusText" Margin="0,4,0,12"/>
-<TextBlock Text="保存时替换注册；冲突保留旧组合。其余手势首版固定，输入框和 IME 保留正常编辑与候选导航。" Margin="0,0,0,12"/>
+<TextBlock Text="热键保存后生效；冲突时保留原组合。" Margin="0,0,0,12"/>
 <ItemsControl x:Name="ShortcutList"><ItemsControl.ItemTemplate><DataTemplate><Border Padding="4,7" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="0,0,0,1"><DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding Shortcut}" Width="215" TextWrapping="Wrap"/><TextBlock Text="{Binding Title}"/></DockPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-<TextBlock Text="Ctrl+C 中断；Ctrl+Shift+C 只复制有效选区。清屏视图只清可见缓冲，清回滚只删主屏历史，均不向 Shell 发命令。cls / Clear-Host / clear 需用户在 Shell 中主动输入；Ctrl+L 继续交给 Shell。" Margin="0,12,0,0"/>
+<TextBlock Text="Ctrl+C 中断，Ctrl+Shift+C 复制选区。清屏 / 清回滚只清理显示缓冲，不执行 Shell 命令。" Margin="0,12,0,0"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
 <TabItem Header="配置与 Profile" Tag="&#xE8B7;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="工作台" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="默认 Profile" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="DefaultProfileInput" Width="240" SelectedValuePath="Id" SelectionChanged="WorkbenchInput_Changed"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
@@ -253,11 +252,11 @@
 <CheckBox x:Name="TranscriptionEnabledInput" Content="转录当前会话输出（每个新会话默认关闭）" Click="ToggleTranscript_Click" Margin="0,8"/>
 <TextBlock x:Name="RecordingStatusText" TextWrapping="Wrap" Margin="0,0,0,8"/>
 <WrapPanel Margin="0,0,0,12"><Button Content="查看 / 搜索应用历史" Click="ViewHistory_Click"/><Button Content="清除应用历史" Click="ClearHistory_Click"/><Button Content="停止并清除全部转录" Click="ClearTranscripts_Click"/></WrapPanel>
-<TextBlock Text="草稿、已保存的旧记录偏好与布局恢复不会开启记录。Shell 自身历史策略保持原样。Ctrl+单击终端 URL / 路径可先查看完整目标；本地文件在资源管理器中定位。" TextWrapping="Wrap" Margin="0,0,0,16"/>
+<TextBlock Text="记录须手动开启，不影响 Shell 自身历史。Ctrl+单击终端链接可预览目标。" TextWrapping="Wrap" Margin="0,0,0,16"/>
 <TextBlock Text="Shell 通知（仅窗口失焦，无声音）" FontWeight="SemiBold"/>
 <CheckBox x:Name="NotifyCompletedInput" Content="命令完成" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
 <CheckBox x:Name="NotifyLongTaskInput" Content="长任务结束" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
-<CheckBox x:Name="NotifyReadyInput" Content="可靠 Shell 提示符等待输入（不猜测程序内部等待）" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
+<CheckBox x:Name="NotifyReadyInput" Content="Shell 提示符等待输入" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
 <StackPanel Orientation="Horizontal" Margin="0,6,0,16"><TextBlock Text="长任务门槛（秒）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="LongTaskSecondsInput" Width="160" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <ContentControl x:Name="ProfileEditorHost"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
@@ -271,7 +270,7 @@
 </TabControl>
 <Border Grid.Row="2" Margin="0,12,0,0" Padding="14,10" CornerRadius="12" Background="{DynamicResource Theme.SurfaceBackground}"><StackPanel><StackPanel.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="FontSize" Value="12"/><Setter Property="Padding" Value="10,6"/><Setter Property="Margin" Value="0,3,6,3"/></Style></StackPanel.Resources><TextBlock x:Name="SettingsValidationText" Foreground="{DynamicResource Theme.ErrorBorder}" TextWrapping="Wrap" Margin="0,0,0,6"/>
 <WrapPanel><Button x:Name="SaveDraftButton" Content="保存设置" Style="{StaticResource PrimaryButton}" Click="SaveDraftButton_Click"/><Button x:Name="CancelDraftButton" Content="取消设置预览" Click="CancelDraftButton_Click"/><Button Content="恢复当前分类默认值" Click="RestoreDefaults_Click"/><Button Content="重载正式配置" Click="ReloadFormal_Click"/><Button Content="重试草稿清理" Click="RetryCleanup_Click"/></WrapPanel>
-<WrapPanel x:Name="ProfileSaveBar" Margin="0,6,0,0" Visibility="Collapsed"><Button x:Name="SaveProfilesButton" Content="保存 Profile" Style="{StaticResource PrimaryButton}" Click="SaveProfiles_Click"/><Button x:Name="CancelProfilesButton" Content="取消 Profile 草稿" Click="CancelProfiles_Click"/><TextBlock Text="本栏只提交 / 取消 Profile 目录。" VerticalAlignment="Center"/></WrapPanel>
+<WrapPanel x:Name="ProfileSaveBar" Margin="0,6,0,0" Visibility="Collapsed"><Button x:Name="SaveProfilesButton" Content="保存 Profile" Style="{StaticResource PrimaryButton}" Click="SaveProfiles_Click"/><Button x:Name="CancelProfilesButton" Content="取消 Profile 草稿" Click="CancelProfiles_Click"/></WrapPanel>
 </StackPanel></Border></Grid>
                 <Grid x:Name="TerminalPanel" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>

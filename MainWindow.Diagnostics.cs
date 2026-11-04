@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -163,7 +164,7 @@ public partial class MainWindow
             var events = await _host.Diagnostics.ReadRecentAsync();
             var visual = _visuals.Diagnostics;
             var text = new StringBuilder("ArkTerminal diagnostic preview\n");
-            text.AppendLine($"Version: {typeof(App).Assembly.GetName().Version}; OS: {Environment.OSVersion.Version}; .NET: {Environment.Version}; Mode: {_host.Paths.Mode}");
+            text.AppendLine($"Version: {typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion}; OS: {Environment.OSVersion.Version}; .NET: {Environment.Version}; Mode: {_host.Paths.Mode}");
             text.AppendLine("Data: <DATA_ROOT>; Home: <HOME>; Config: <DATA_ROOT>/Config; Diagnostics: <DATA_ROOT>/Diagnostics");
             text.AppendLine($"ConPTY: Windows build {Environment.OSVersion.Version.Build}; renderer: DirectWrite/D2D/D3DImage; material: {visual.AppliedMaterial}; desktop: {visual.DesktopBackgroundApplied}; aurora: {visual.AuroraAnimating}; performance mode: {visual.PerformanceModeEnabled}");
             text.AppendLine($"Capabilities: systemBackdrop={_visuals.SupportsSystemBackdrop}; desktopBackground={_visuals.SupportsDesktopBackground}; administrator={ArkTerminal.Terminal.Sessions.Elevation.ElevationSupport.UnavailableReason is null}; shellIntegration=true; agentLauncher=true; historyRecorder=true; transcription=true");
