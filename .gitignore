@@ -4,3 +4,17 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
+.vs/
+*.user
+*.suo
+
+# Local runtime data and portable mode marker
+/data/
+/portable.flag
+
+# Personal environment files and signing keys
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
