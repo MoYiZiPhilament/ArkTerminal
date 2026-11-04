@@ -5,6 +5,7 @@ namespace ArkTerminal.Terminal.Screen;
 internal sealed class IncrementalTextElementSegmenter
 {
     private const int MaxPendingUtf16Length = 256;
+    private static readonly string[] AsciiElements = Enumerable.Range(0, 128).Select(value => ((char)value).ToString()).ToArray();
     private string _pending = string.Empty;
     private int _publishedLength;
 
@@ -16,7 +17,8 @@ internal sealed class IncrementalTextElementSegmenter
         {
             var length = StringInfo.GetNextTextElementLength(_pending, offset);
             var isLast = offset + length == _pending.Length;
-            var element = _pending.Substring(offset, length);
+            var element = length == 1 && _pending[offset] < AsciiElements.Length
+                ? AsciiElements[_pending[offset]] : _pending.Substring(offset, length);
             if (_publishedLength > 0)
             {
                 if (length != _publishedLength) update(_pending[.._publishedLength], element);

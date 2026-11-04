@@ -44,6 +44,7 @@ public sealed class SessionManager : ISessionManager
             MaxCsiParameters = _options.MaxCsiParameters,
             MaxOscLength = _options.MaxOscLength,
             MaxScrollbackLines = Math.Clamp(request.ScrollbackLines, 0, 100_000),
+            MaxScrollbackBytes = _options.MaxScrollbackBytes,
             ProcessExitGrace = _options.ProcessExitGrace,
             OutputDrainGrace = _options.OutputDrainGrace
         };

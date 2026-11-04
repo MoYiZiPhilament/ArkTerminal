@@ -29,6 +29,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
     private Task? _readTask;
     private Task? _writeTask;
     private Task? _resizeTask;
+    private Task? _processExitTask;
     private Task? _closeTask;
     private SafeThreadHandle? _readThread;
     private SafeThreadHandle? _writeThread;
@@ -42,7 +43,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
     {
         _options = options;
         Id = Guid.NewGuid();
-        _screen = new TerminalScreen(options.InitialColumns, options.InitialRows, options.MaxScrollbackLines);
+        _screen = new TerminalScreen(options.InitialColumns, options.InitialRows, options.MaxScrollbackLines, options.MaxScrollbackBytes);
         _streamDecoder = new TerminalStreamDecoder(_screen, options, WriteResponse, _shell.Accept, text => { if (TextReceived is not null) _plainText.Append(text); });
         _shell.Changed += (_, args) => ShellIntegrationChanged?.Invoke(this, args);
         _input = Channel.CreateBounded<ReadOnlyMemory<byte>>(new BoundedChannelOptions(options.InputQueueCapacity)
@@ -124,7 +125,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                     _acceptingInput = _closeTask is null;
                     _readTask = _remote.Completion;
                     _writeTask = Task.Run(RemoteWriteLoopAsync);
-                    _resizeTask = Task.Run(ResizeLoop);
+                    _resizeTask = Task.Run(ResizeLoopAsync);
                 }
             }
             else
@@ -142,9 +143,11 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                     _process = process;
                     VerifiedLaunchProcessName = process.ExecutableName;
                     _acceptingInput = true;
-                    _readTask = Task.Run(ReadLoop);
-                    _writeTask = Task.Run(WriteLoop);
-                    _resizeTask = Task.Run(ResizeLoop);
+                    // Synchronous ConPTY pipe I/O must not occupy shared pool workers while idle.
+                    _readTask = Task.Factory.StartNew(ReadLoop, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                    _writeTask = Task.Factory.StartNew(WriteLoop, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                    _resizeTask = Task.Run(ResizeLoopAsync);
+                    _processExitTask = WatchProcessExitAsync(process);
                 }
             }
             if (State == SessionState.Starting)
@@ -356,6 +359,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
             }
             await WaitForWorkerAsync(_writeTask).ConfigureAwait(false);
             await WaitForWorkerAsync(_resizeTask).ConfigureAwait(false);
+            await WaitForWorkerAsync(_processExitTask).ConfigureAwait(false);
             await Task.Run(process.Dispose).WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
         }
         catch (Exception)
@@ -381,6 +385,18 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
             await task.WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
         }
         catch (Exception)
+        {
+        }
+    }
+
+    private async Task WatchProcessExitAsync(ConPtyProcess process)
+    {
+        try
+        {
+            await process.WaitForExitAsync(_resizeCancellation.Token).ConfigureAwait(false);
+            _ = CloseAsync(CancellationToken.None);
+        }
+        catch (OperationCanceledException)
         {
         }
     }
@@ -501,13 +517,13 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         finally { _diagnostics.SetWriteWorker(false); }
     }
 
-    private void ResizeLoop()
+    private async Task ResizeLoopAsync()
     {
         try
         {
             while (true)
             {
-                _resizeSignal.Wait(_resizeCancellation.Token);
+                await _resizeSignal.WaitAsync(_resizeCancellation.Token).ConfigureAwait(false);
                 ResizeRequest? request;
                 lock (_resizeSync)
                 {
@@ -521,7 +537,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                 try
                 {
                     _process?.Resize(request.Columns, request.Rows);
-                    _remote?.ResizeAsync(request.Columns, request.Rows).GetAwaiter().GetResult();
+                    if (_remote is not null) await _remote.ResizeAsync(request.Columns, request.Rows).ConfigureAwait(false);
                     _screen.Resize(request.Columns, request.Rows);
                     PublishScreenChanges();
                     request.Completion.TrySetResult();

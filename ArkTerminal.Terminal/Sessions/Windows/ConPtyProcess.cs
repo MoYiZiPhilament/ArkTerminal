@@ -197,6 +197,29 @@ internal sealed class ConPtyProcess : IDisposable
 
     internal void Wait(uint milliseconds) => NativeMethods.WaitForSingleObject(_process, milliseconds);
 
+    internal async Task WaitForExitAsync(CancellationToken cancellationToken)
+    {
+        using var handle = new ProcessExitWaitHandle(_process);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var registration = ThreadPool.RegisterWaitForSingleObject(handle,
+            static (state, _) => ((TaskCompletionSource)state!).TrySetResult(), completion, Timeout.Infinite, executeOnlyOnce: true);
+        using var cancellation = cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
+        try
+        {
+            await completion.Task.ConfigureAwait(false);
+        }
+        finally
+        {
+            registration.Unregister(null);
+        }
+    }
+
+    private sealed class ProcessExitWaitHandle : WaitHandle
+    {
+        internal ProcessExitWaitHandle(SafeProcessHandle process) =>
+            SafeWaitHandle = new SafeWaitHandle(process.DangerousGetHandle(), ownsHandle: false);
+    }
+
     internal void TerminateTree()
     {
         if (!_job.IsInvalid && !_job.IsClosed)

@@ -9,13 +9,14 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
-        <EmbeddedResource Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
-        <None Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
-        <Page Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**" />
+        <Compile Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**;Packaging/**" />
+        <EmbeddedResource Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**;Packaging/**" />
+        <None Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**;Packaging/**" />
+        <Page Remove="ArkTerminal.Core/**;ArkTerminal.Terminal/**;ArkTerminal.Mcp/**;Packaging/**" />
     </ItemGroup>
 
     <ItemGroup>
@@ -32,10 +33,13 @@
         <Copy SourceFiles="@(McpBridgeFiles)" DestinationFolder="$(OutDir)Mcp" SkipUnchangedFiles="true" />
     </Target>
     <Target Name="PublishMcpBridge" AfterTargets="ComputeFilesToPublish">
+        <MSBuild Projects="ArkTerminal.Mcp\ArkTerminal.Mcp.csproj" Targets="Publish"
+                 BuildInParallel="false"
+                 Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained);PublishDir=$(MSBuildProjectDirectory)\obj\McpPublish\$(Configuration)\$(RuntimeIdentifier)\" />
         <ItemGroup>
-            <McpPublishFiles Include="ArkTerminal.Mcp\bin\$(Configuration)\net10.0-windows\$(RuntimeIdentifier)\*" />
+            <McpPublishFiles Include="obj\McpPublish\$(Configuration)\$(RuntimeIdentifier)\**\*" />
             <ResolvedFileToPublish Include="@(McpPublishFiles)">
-                <RelativePath>Mcp\%(McpPublishFiles.Filename)%(McpPublishFiles.Extension)</RelativePath>
+                <RelativePath>Mcp\%(McpPublishFiles.RecursiveDir)%(McpPublishFiles.Filename)%(McpPublishFiles.Extension)</RelativePath>
                 <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
             </ResolvedFileToPublish>
         </ItemGroup>

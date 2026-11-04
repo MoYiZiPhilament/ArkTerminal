@@ -12,6 +12,8 @@ public sealed class TerminalScreen
     private TerminalBuffer _alternate;
     private TerminalBuffer _active;
     private int _maxScrollbackLines;
+    private readonly long _maxScrollbackBytes;
+    private long _scrollbackBytes;
     private int _scrollTop;
     private int _scrollBottom;
     private (int Row, int Column, bool WrapPending) _savedCursor;
@@ -21,8 +23,13 @@ public sealed class TerminalScreen
     private int _dirtyEnd = -1;
 
     public TerminalScreen(int columns, int rows, int maxScrollbackLines)
+        : this(columns, rows, maxScrollbackLines, Sessions.TerminalSessionOptions.DefaultMaxScrollbackBytes)
     {
-        if (columns <= 0 || rows <= 0 || maxScrollbackLines < 0)
+    }
+
+    public TerminalScreen(int columns, int rows, int maxScrollbackLines, long maxScrollbackBytes)
+    {
+        if (columns <= 0 || rows <= 0 || maxScrollbackLines < 0 || maxScrollbackBytes <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(columns));
         }
@@ -30,6 +37,7 @@ public sealed class TerminalScreen
         _alternate = new TerminalBuffer(columns, rows);
         _active = _main;
         _maxScrollbackLines = maxScrollbackLines;
+        _maxScrollbackBytes = maxScrollbackBytes;
         _scrollBottom = rows - 1;
     }
 
@@ -351,7 +359,7 @@ public sealed class TerminalScreen
                 }
                 if (mode == 3 && ReferenceEquals(_active, _main))
                 {
-                    _scrollback.Clear();
+                    ClearHistory();
                 }
             }
             else if (mode == 0)
@@ -565,7 +573,7 @@ public sealed class TerminalScreen
             _main = new TerminalBuffer(Columns, Rows);
             _alternate = new TerminalBuffer(Columns, Rows);
             _active = _main;
-            _scrollback.Clear();
+            ClearHistory();
             _scrollTop = 0;
             _scrollBottom = Rows - 1;
             AutoWrap = true;
@@ -632,7 +640,8 @@ public sealed class TerminalScreen
     {
         lock (_sync)
             return new(Columns, Rows, _scrollback.Count, _maxScrollbackLines,
-                (long)Columns * (_scrollback.Count + _main.Lines.Count + _alternate.Lines.Count));
+                (long)Columns * (_scrollback.Count + _main.Lines.Count + _alternate.Lines.Count))
+            { EstimatedScrollbackBytes = _scrollbackBytes, MaxScrollbackBytes = _maxScrollbackBytes };
     }
 
     public void ClearViewport()
@@ -653,7 +662,7 @@ public sealed class TerminalScreen
     {
         lock (_sync)
         {
-            _scrollback.Clear();
+            ClearHistory();
             MarkAllDirty();
         }
     }
@@ -760,6 +769,25 @@ public sealed class TerminalScreen
     private int Columns => _active.Lines[0].Cells.Length;
     private int Rows => _active.Lines.Count;
 
+    private void ClearHistory()
+    {
+        _scrollback.Clear();
+        _scrollbackBytes = 0;
+    }
+
+    private TerminalLine? TrimHistory()
+    {
+        var removed = 0;
+        var reusable = _scrollback.Count > 0 ? _scrollback[0] : null;
+        while (removed < _scrollback.Count &&
+            (_scrollback.Count - removed > _maxScrollbackLines || _scrollbackBytes > _maxScrollbackBytes))
+        {
+            _scrollbackBytes -= _scrollback[removed++].EstimatedStorageBytes;
+        }
+        if (removed > 0) _scrollback.RemoveRange(0, removed);
+        return removed > 0 ? reusable : null;
+    }
+
     private bool TryExtendPreviousCluster(string text)
     {
         var line = _active.Lines[_active.CursorRow];
@@ -823,12 +851,14 @@ public sealed class TerminalScreen
     private void WrapLine()
     {
         var previous = _active.Lines[_active.CursorRow];
+        var logicalLineNumber = previous.LogicalLineNumber;
+        var firstOutputAtUtc = previous.FirstOutputAtUtc;
         _active.Lines[_active.CursorRow].IsSoftWrapped = true;
         _active.WrapPending = false;
         _active.CursorColumn = 0;
         LineFeedCore();
-        _active.Lines[_active.CursorRow].LogicalLineNumber = previous.LogicalLineNumber;
-        _active.Lines[_active.CursorRow].FirstOutputAtUtc = previous.FirstOutputAtUtc;
+        _active.Lines[_active.CursorRow].LogicalLineNumber = logicalLineNumber;
+        _active.Lines[_active.CursorRow].FirstOutputAtUtc = firstOutputAtUtc;
     }
 
     private void LineFeedCore()
@@ -848,19 +878,20 @@ public sealed class TerminalScreen
     private void ScrollUpCore(int count)
     {
         count = Math.Min(count, _scrollBottom - _scrollTop + 1);
+        var columns = Columns;
         for (var index = 0; index < count; index++)
         {
             var removed = _active.Lines[_scrollTop];
             _active.Lines.RemoveAt(_scrollTop);
-            _active.Lines.Insert(_scrollBottom, new TerminalLine(Columns));
+            TerminalLine? reusable = null;
             if (ReferenceEquals(_active, _main) && _scrollTop == 0 && _maxScrollbackLines > 0)
             {
                 _scrollback.Add(removed);
+                _scrollbackBytes += removed.EstimatedStorageBytes;
+                reusable = TrimHistory();
             }
-        }
-        if (_scrollback.Count > _maxScrollbackLines)
-        {
-            _scrollback.RemoveRange(0, _scrollback.Count - _maxScrollbackLines);
+            if (reusable is not null) reusable.Reuse();
+            _active.Lines.Insert(_scrollBottom, reusable ?? new TerminalLine(columns));
         }
         MarkAllDirty();
     }
@@ -1033,10 +1064,12 @@ public sealed class TerminalScreen
         }
 
         var start = Math.Max(0, output.Count - rows);
-        _scrollback.Clear();
+        ClearHistory();
         if (_maxScrollbackLines > 0 && start > 0)
         {
             _scrollback.AddRange(output.Take(start).Skip(Math.Max(0, start - _maxScrollbackLines)));
+            _scrollbackBytes = _scrollback.Sum(line => line.EstimatedStorageBytes);
+            TrimHistory();
         }
         _main = new TerminalBuffer(columns, rows);
         _main.Lines.Clear();

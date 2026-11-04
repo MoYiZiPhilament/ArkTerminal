@@ -76,9 +76,10 @@
       "arkterminal.terminal": {
         "type": "Project",
         "dependencies": {
-          "ArkTerminal.Core": "[1.0.0, )"
+          "ArkTerminal.Core": "[0.1.0-preview.1, )"
         }
       }
-    }
+    },
+    "net10.0-windows7.0/win-x64": {}
   }
 }

@@ -148,7 +148,7 @@ public partial class MainWindow
         for (var index = 0; index < result.Rows.Length; index++)
         {
             var row = result.Rows[index];
-            text.AppendLine(FormattableString.Invariant($"会话 {index + 1} [{row.State}]：输入队列 {row.Io.InputQueueDepth}/{row.Io.InputQueueCapacity} 项；resize 待处理 {row.Io.ResizePending}；网格 {row.Buffer.Columns}×{row.Buffer.Rows}；回滚 {row.Buffer.ScrollbackLines}/{row.Buffer.ScrollbackCapacity} 行；单元格估算 {row.Buffer.EstimatedCellStorageBytes / 1048576d:F2} MiB"));
+            text.AppendLine(FormattableString.Invariant($"会话 {index + 1} [{row.State}]：输入队列 {row.Io.InputQueueDepth}/{row.Io.InputQueueCapacity} 项；resize 待处理 {row.Io.ResizePending}；网格 {row.Buffer.Columns}×{row.Buffer.Rows}；回滚 {row.Buffer.ScrollbackLines}/{row.Buffer.ScrollbackCapacity} 行，存储估算 {row.Buffer.EstimatedScrollbackBytes / 1048576d:F2}/{row.Buffer.MaxScrollbackBytes / 1048576d:F0} MiB；单元格估算 {row.Buffer.EstimatedCellStorageBytes / 1048576d:F2} MiB"));
         }
         text.Append("会话估算 = 已分配单元格槽位 × 64 B，排除可变字簇文本、CLR/行数组及共享图形开销；不是精确会话内存。隐藏面板停止周期采样。");
         return text.ToString();

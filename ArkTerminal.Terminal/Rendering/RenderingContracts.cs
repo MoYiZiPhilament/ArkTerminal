@@ -118,6 +118,8 @@ public sealed record TerminalTextSlice(string Text, bool Truncated, bool Availab
 
 public sealed record TerminalBufferStatistics(int Columns, int Rows, int ScrollbackLines, int ScrollbackCapacity, long AllocatedCellSlots)
 {
+    public long EstimatedScrollbackBytes { get; init; }
+    public long MaxScrollbackBytes { get; init; }
     // Capacity estimate only: excludes variable text, CLR and line/array overhead.
     public long EstimatedCellStorageBytes => AllocatedCellSlots * 64;
 }

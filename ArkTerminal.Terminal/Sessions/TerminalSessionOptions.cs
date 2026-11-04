@@ -2,6 +2,7 @@ namespace ArkTerminal.Terminal.Sessions;
 
 public sealed class TerminalSessionOptions
 {
+    public const long DefaultMaxScrollbackBytes = 64L * 1024 * 1024;
     public string? ElevationHostPath { get; init; }
     public int InitialColumns { get; init; } = 120;
     public int InitialRows { get; init; } = 30;
@@ -12,6 +13,7 @@ public sealed class TerminalSessionOptions
     public int MaxCsiParameters { get; init; } = 32;
     public int MaxOscLength { get; init; } = 16 * 1024;
     public int MaxScrollbackLines { get; init; } = 5000;
+    public long MaxScrollbackBytes { get; init; } = DefaultMaxScrollbackBytes;
     public TimeSpan ProcessExitGrace { get; init; } = TimeSpan.FromSeconds(2);
     public TimeSpan OutputDrainGrace { get; init; } = TimeSpan.FromSeconds(2);
 
@@ -19,7 +21,7 @@ public sealed class TerminalSessionOptions
     {
         if (InitialColumns <= 0 || InitialRows <= 0 || ReadBufferSize <= 0 ||
             InputQueueCapacity <= 0 || InputChunkSize <= 0 || MaxCsiLength < 32 ||
-            MaxCsiParameters <= 0 || MaxOscLength < 64 || MaxScrollbackLines < 0 ||
+            MaxCsiParameters <= 0 || MaxOscLength < 64 || MaxScrollbackLines < 0 || MaxScrollbackBytes <= 0 ||
             ProcessExitGrace <= TimeSpan.Zero || OutputDrainGrace <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(TerminalSessionOptions), "终端会话限制必须为有效正数。");

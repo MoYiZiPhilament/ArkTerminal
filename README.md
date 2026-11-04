@@ -2,7 +2,7 @@
 
 面向 Windows 的原生 WPF Shell / Agent 工作台，使用 ConPTY 驱动真实终端进程，以 DirectWrite 和 Direct3D 共享表面绘制终端内容。
 
-当前已实现阶段 1–9 的功能，处于开发与补充验收阶段。Windows 10、跨显示器、其他输入法、真实 Agent 模型任务及 MSIX 等场景仍需验证；当前源码快照不代表最终发行验收通过。完整状态见 [项目进度](PROGRESS.md)。
+当前已实现阶段 1–9，并完成阶段 10 的本机缺陷修复、性能测量和双格式本地预览打包。版本为 `0.1.0-preview.1`，尚未通过最终发行验收：MSIX 隔离安装及其 MCP / UAC、Windows 10、跨显示器、物理输入与长期资源验收仍有缺口。完整状态见 [项目进度](PROGRESS.md)。
 
 ## 现有功能
 
@@ -38,6 +38,23 @@ dotnet run --project ArkTerminal.csproj -c Release --no-build -- --portable
 
 标准模式的数据根为 `%APPDATA%\ArkTerminal`；便携模式的数据根为可执行文件目录下的 `data`，也可通过同目录的 `portable.flag` 启用。两种模式的数据相互隔离。真实 MSIX 包的安装与权限验收仍待完成，包身份下管理员启动保持禁用。
 
+## 本地分发预览
+
+`Packaging/Build-Packages.ps1` 生成自包含 `win-x64` 便携 ZIP 和 full-trust MSIX，
+随包携带 .NET / WindowsDesktop 10.0.11、MCP 桥、许可及使用说明。
+提权辅助器复用主 exe 的独立辅助进程入口。源码版本与运行时固定于
+`Directory.Build.props`；不启用 trimming、AOT 或单文件。
+
+```powershell
+pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.28000.0\x64' -DevelopmentSign
+```
+
+默认输出 `bin/Packages/0.1.0-preview.1/`，其中的 `SHA256SUMS.txt` 可用于核对。
+开发 MSIX 使用临时生成的自签证书，默认不受系统信任；脚本不安装应用或导入证书。
+ZIP 内 exe 没有 Authenticode 签名。MSIX 的 MCP 配置入口和管理员会话目前仍不可用，
+完整 MSIX 发行验收被阻塞。数据目录、备份、手动替换升级、卸载、签名条件及工具链
+见 [分发与维护说明](Packaging/README.md)。应用始终手动更新。
+
 ## 上下文与 MCP
 
 应用菜单、命令面板或 `Ctrl+Shift+F9` 打开上下文工作流。交接前可检查并编辑最终正文；当前对 Agent 的交接采用用户手动粘贴，复制不代表执行。
@@ -60,7 +77,8 @@ MCP 桥位于构建输出的 `Mcp` 子目录。请保留完整输出目录，并
 | [AGENTS.md](AGENTS.md) | 开发约束、架构细节与历史验收记录 |
 | [Prompt/](Prompt/) | 十个阶段的实施需求；需求不等同于完成记录 |
 | [Examples/](Examples/) | 设置、Profile、Agent 适配器及 MCP 使用示例 |
+| [Packaging/](Packaging/) | 本地 ZIP / MSIX 构建、清单、许可与手动维护说明 |
 
 ## 许可证
 
-项目采用 [Apache License 2.0](LICENSE)。第三方依赖保留各自许可证，版本见项目文件及依赖锁文件；最终发行包的依赖许可随包检查仍列入阶段 10。
+项目采用 [Apache License 2.0](LICENSE)。第三方依赖保留各自许可证，版本见项目文件及依赖锁文件；本地预览随包携带 [第三方声明](Packaging/THIRD-PARTY-NOTICES.md)、Unicode 许可、运行时许可及精确依赖清单。

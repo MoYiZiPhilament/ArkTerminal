@@ -50,11 +50,23 @@ internal sealed class TerminalLine
         }
     }
 
-    internal long Id { get; } = Interlocked.Increment(ref _nextId);
+    internal long Id { get; private set; } = Interlocked.Increment(ref _nextId);
     internal TerminalCell[] Cells { get; set; }
     internal bool IsSoftWrapped { get; set; }
     internal long? LogicalLineNumber { get; set; }
     internal DateTimeOffset? FirstOutputAtUtc { get; set; }
+    // Conservative retained-history estimate, including variable text and link targets.
+    internal long EstimatedStorageBytes => 128L + Cells.Length * 72L +
+        Cells.Sum(cell => (cell.Text.Length == 0 ? 0 : 32L + 2L * cell.Text.Length) +
+            (cell.Style.Hyperlink is { Length: > 0 } link ? 32L + 2L * link.Length : 0));
+
+    internal void Reuse()
+    {
+        Clear(TerminalStyle.Default);
+        Id = Interlocked.Increment(ref _nextId);
+        LogicalLineNumber = null;
+        FirstOutputAtUtc = null;
+    }
 
     internal TerminalLine Clone()
     {
