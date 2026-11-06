@@ -197,7 +197,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                 out _);
             if (charactersUsed == 0)
             {
-                throw new InvalidOperationException("无法增量编码终端输入。");
+                throw new InvalidOperationException(Localize.T("Text0506"));
             }
             offset += charactersUsed;
             if (bytesUsed > 0)
@@ -226,7 +226,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         {
             if (!_acceptingInput || _state != SessionState.Running)
             {
-                throw new InvalidOperationException("会话未处于可输入状态。");
+                throw new InvalidOperationException(Localize.T("Text0507"));
             }
         }
 
@@ -238,7 +238,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
     {
         if (columns <= 0 || rows <= 0 || columns > short.MaxValue || rows > short.MaxValue)
         {
-            throw new ArgumentOutOfRangeException(nameof(columns), "终端尺寸必须在有效范围内。");
+            throw new ArgumentOutOfRangeException(nameof(columns), Localize.T("Text0508"));
         }
 
         ResizeRequest request;
@@ -407,7 +407,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         try
         {
             _readThread = NativeMethods.OpenThread(NativeMethods.ThreadTerminate, false, NativeMethods.GetCurrentThreadId());
-            var process = _process ?? throw new InvalidOperationException("会话进程尚未创建。");
+            var process = _process ?? throw new InvalidOperationException(Localize.T("Text0509"));
             using var stream = new FileStream(process.OutputRead, FileAccess.Read, 1, isAsync: false);
             var bytes = new byte[_options.ReadBufferSize];
             while (true)
@@ -455,7 +455,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
         try
         {
             _writeThread = NativeMethods.OpenThread(NativeMethods.ThreadTerminate, false, NativeMethods.GetCurrentThreadId());
-            var process = _process ?? throw new InvalidOperationException("会话进程尚未创建。");
+            var process = _process ?? throw new InvalidOperationException(Localize.T("Text0509"));
             using var stream = new FileStream(process.InputWrite, FileAccess.Write, 1, isAsync: false);
             while (!_writeCancellation.IsCancellationRequested)
             {
@@ -513,7 +513,7 @@ public sealed class ConPtySession : ISession, ITerminalBufferReader, ITerminalIn
                 }
         }
         catch (Exception error) when (error is IOException or ObjectDisposedException or OperationCanceledException)
-        { if (State == SessionState.Running) { TransitionTo(SessionState.Failed, "管理员输入连接已断开。"); _ = Task.Run(() => CloseAsync(CancellationToken.None)); } }
+        { if (State == SessionState.Running) { TransitionTo(SessionState.Failed, Localize.T("Text0510")); _ = Task.Run(() => CloseAsync(CancellationToken.None)); } }
         finally { _diagnostics.SetWriteWorker(false); }
     }
 

@@ -1,4 +1,5 @@
 using System.Windows;
+using ArkTerminal.Core.Localization;
 using ArkTerminal.Infrastructure;
 
 namespace ArkTerminal;
@@ -22,7 +23,7 @@ public partial class App : Application
         _singleInstance = new Mutex(true, @"Local\ArkTerminal.SingleInstance", out _ownsMutex);
         if (!_ownsMutex)
         {
-            MessageBox.Show("ArkTerminal 已在当前用户会话中运行。第二个实例已退出，未写入配置。", "ArkTerminal", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Localize.T("Text0001"), "ArkTerminal", MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
@@ -31,6 +32,8 @@ public partial class App : Application
         {
             _host = new AppHost();
             await _host.InitializeAsync(e.Args, new WindowsPackagingContext());
+            Localize.Configure(_host.FormalSettings?.Regional);
+            ArkTerminal.Localization.LocalizationTreeRefresher.Attach();
             var window = new MainWindow(_host);
             MainWindow = window;
             window.Show();
@@ -38,8 +41,8 @@ public partial class App : Application
         catch (Exception exception)
         {
             var path = exception is AppDataInitializationException dataException ? dataException.ErrorPath : null;
-            var location = string.IsNullOrWhiteSpace(path) ? string.Empty : $"{Environment.NewLine}路径：{path}";
-            MessageBox.Show($"ArkTerminal 初始化失败：{exception.Message}{location}", "ArkTerminal", MessageBoxButton.OK, MessageBoxImage.Error);
+            var location = string.IsNullOrWhiteSpace(path) ? string.Empty : Localize.F("Text0002", Environment.NewLine, path);
+            MessageBox.Show(Localize.F("Text0003", exception.Message, location), "ArkTerminal", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
         }
     }

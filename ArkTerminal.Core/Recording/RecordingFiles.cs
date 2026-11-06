@@ -19,13 +19,13 @@ internal static class RecordingFiles
     {
         for (var parent = new DirectoryInfo(directory); parent is not null; parent = parent.Parent)
             if (parent.Exists && (parent.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("记录目录经过重解析点，已停止写入。");
+                throw new IOException(Localize.T("Text0672"));
         Directory.CreateDirectory(directory);
     }
     internal static void CheckFile(string path)
     {
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("记录文件是重解析点，已停止访问。");
+            throw new IOException(Localize.T("Text0673"));
     }
     internal static List<FileInfo> Transcripts(string directory)
     {

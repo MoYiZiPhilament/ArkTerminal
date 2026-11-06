@@ -44,36 +44,36 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
         _host = host;
         var root = new StackPanel();
         root.Children.Add(new TextBlock { Text = "Profile", FontSize = 20, FontWeight = FontWeights.SemiBold });
-        root.Children.Add(new TextBlock { Text = "修改对下次新建 / 重启生效，需单独保存 Profile。", Margin = new(0, 6, 0, 8) });
+        root.Children.Add(new TextBlock { Text = Localize.T("Text0359"), Margin = new(0, 6, 0, 8) });
         root.Children.Add(_list);
         var actions = new WrapPanel { Margin = new(0, 8, 0, 12) };
-        AddButton(actions, "新建", () => Add(false));
-        AddButton(actions, "复制", () => Add(true));
-        AddButton(actions, "删除", Delete);
+        AddButton(actions, Localize.T("Text0360"), () => Add(false));
+        AddButton(actions, Localize.T("Text0361"), () => Add(true));
+        AddButton(actions, Localize.T("Text0294"), Delete);
         root.Children.Add(actions);
-        AddText("id", "稳定 ID").IsReadOnly = true;
-        AddText("name", "名称");
-        AddText("icon", "图标（文字 / Unicode 符号，最多 64 字符）");
-        AddText("executablePath", "可执行文件 / PATH 名称");
-        AddLabel("Shell 启动参数（逐项填写）", _arguments);
-        AddText("postLaunchInput", "启动后原样输入：发送一次，不补 Enter；末尾换行决定最后一行是否执行。", true);
-        AddText("workingDirectory", "工作目录（支持 {{home}}）");
-        AddText("environment", "环境变量（每行 KEY=VALUE）", true);
+        AddText("id", Localize.T("Text0362")).IsReadOnly = true;
+        AddText("name", Localize.T("Text0363"));
+        AddText("icon", Localize.T("Text0364"));
+        AddText("executablePath", Localize.T("Text0365"));
+        AddLabel(Localize.T("Text0366"), _arguments);
+        AddText("postLaunchInput", Localize.T("Text0367"), true);
+        AddText("workingDirectory", Localize.T("Text0368"));
+        AddText("environment", Localize.T("Text0369"), true);
         _form.Children.Add(_path);
-        AddCheck("terminal.useGlobalFont", "继承全局终端字体和字号（覆盖值保留）");
-        AddText("terminal.fontFamily", "覆盖字体");
-        AddText("terminal.fontSize", "覆盖字号（6—96）");
+        AddCheck("terminal.useGlobalFont", Localize.T("Text0370"));
+        AddText("terminal.fontFamily", Localize.T("Text0371"));
+        AddText("terminal.fontSize", Localize.T("Text0372"));
         _form.Children.Add(new RoundedBorder { CornerRadius = new(10), Child = FontPreview });
-        AddText("terminal.scrollbackLines", "回滚行数（运行时最多 100000 行）");
-        AddCheck("administrator", "管理员启动（每次需 Windows UAC）");
-        AddCheck("shellIntegration", "Shell 集成（仅当前进程）");
-        AddCheck("agent", "使用 Agent 配方");
-        AddText("agentRecipe.agentId", "Agent ID（从新建页 Agent 区生成）");
-        AddText("agentRecipe.model", "模型标识符");
-        AddText("agentRecipe.permissionMode", "Agent 权限参数（不绕过 OS 或 CLI 授权）");
-        AddText("agentRecipe.workingDirectory", "Agent 目录（允许 {{home}}）");
-        AddLabel("Agent Shell 后端", _backend);
-        AddLabel("Agent 附加参数：仅允许适配器白名单，不保存凭据或初始任务。", _agentArguments);
+        AddText("terminal.scrollbackLines", Localize.T("Text0373"));
+        AddCheck("administrator", Localize.T("Text0374"));
+        AddCheck("shellIntegration", Localize.T("Text0375"));
+        AddCheck("agent", Localize.T("Text0376"));
+        AddText("agentRecipe.agentId", Localize.T("Text0377"));
+        AddText("agentRecipe.model", Localize.T("Text0378"));
+        AddText("agentRecipe.permissionMode", Localize.T("Text0379"));
+        AddText("agentRecipe.workingDirectory", Localize.T("Text0380"));
+        AddLabel(Localize.T("Text0381"), _backend);
+        AddLabel(Localize.T("Text0382"), _agentArguments);
         _form.Children.Add(_summary);
         root.Children.Add(_form);
         Content = root;
@@ -213,9 +213,9 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
         candidate.Terminal.UseGlobalFont = raw.GetValueOrDefault("terminal.useGlobalFont") == "True";
         candidate.Terminal.FontFamily = raw.GetValueOrDefault("terminal.fontFamily", source.Terminal.FontFamily);
         if (double.TryParse(raw.GetValueOrDefault("terminal.fontSize"), NumberStyles.Float, CultureInfo.InvariantCulture, out var size)) candidate.Terminal.FontSize = size;
-        else errors["terminal.fontSize"] = "请输入有效字号。";
+        else errors["terminal.fontSize"] = Localize.T("Text0383");
         if (int.TryParse(raw.GetValueOrDefault("terminal.scrollbackLines"), out var lines)) candidate.Terminal.ScrollbackLines = lines;
-        else errors["terminal.scrollbackLines"] = "请输入有效整数。";
+        else errors["terminal.scrollbackLines"] = Localize.T("Text0384");
         candidate.RunAsAdministrator = raw.GetValueOrDefault("administrator") == "True";
         candidate.ShellIntegration = raw.GetValueOrDefault("shellIntegration") == "True" ? ShellIntegrationMode.Automatic : ShellIntegrationMode.Disabled;
         candidate.AgentRecipe = raw.GetValueOrDefault("agent") == "True" ? new()
@@ -267,7 +267,7 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
         if (raw.Where(pair => pair.Key.StartsWith("agentRecipe.", StringComparison.Ordinal)).Any(pair => ArkTerminal.Core.Agents.AgentRecipeRules.ContainsSecret(pair.Value)))
         {
             _debounce?.Cancel();
-            _summary.Text = "Agent 字段含凭据，未加入草稿或写盘。请移除后继续。";
+            _summary.Text = Localize.T("Text0385");
             return;
         }
         _host.ProfilesDraft.EditorValues[_selectedId] = raw;
@@ -294,7 +294,7 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
         {
             await Task.Delay(_host.StorageOptions.DraftDebounceMilliseconds, token);
             var result = await _host.PersistProfilesDraftAsync();
-            if (!result.Success && !token.IsCancellationRequested) StatusChanged?.Invoke(result.Error ?? "Profile 草稿保存失败。");
+            if (!result.Success && !token.IsCancellationRequested) StatusChanged?.Invoke(result.Error ?? Localize.T("Text0386"));
         }
         catch (OperationCanceledException) { }
     }
@@ -304,7 +304,7 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
         _pathCancellation?.Cancel(); _pathCancellation?.Dispose();
         _pathCancellation = new();
         var version = ++_pathVersion;
-        if (profile is null) { _path.Text = "请先修正字段错误，再检查路径。"; return; }
+        if (profile is null) { _path.Text = Localize.T("Text0387"); return; }
         _ = CheckPathAsync(profile.DeepClone(), version, _pathCancellation.Token);
     }
 
@@ -321,23 +321,23 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
                     AgentRecipe = profile.AgentRecipe.DeepClone()
                 }), token)).Request);
             if (version != _pathVersion || token.IsCancellationRequested) return;
-            _path.Text = result.Message + $"\nexecutablePath: {result.ExecutablePath ?? "未解析"}\nworkingDirectory: {result.WorkingDirectory ?? "未解析"}";
+            _path.Text = result.Message + $"\nexecutablePath: {result.ExecutablePath ?? Localize.T("Text0840")}\nworkingDirectory: {result.WorkingDirectory ?? Localize.T("Text0840")}";
         }
         catch (OperationCanceledException) { }
         catch (Exception error) when (error is ArgumentException or System.IO.IOException or InvalidOperationException)
-        { if (version == _pathVersion && !token.IsCancellationRequested) _path.Text = "Agent 当前不可启动：" + error.Message; }
+        { if (version == _pathVersion && !token.IsCancellationRequested) _path.Text = Localize.T("Text0388") + error.Message; }
     }
 
     private void Add(bool duplicate)
     {
         if (!_host.CanEdit) return;
         if (duplicate && !Catalog.Profiles.Any(item => item.Id == _selectedId))
-        { StatusChanged?.Invoke("请先选择要复制的 Profile。"); return; }
+        { StatusChanged?.Invoke(Localize.T("Text0389")); return; }
         _host.EnsureProfilesDraft();
         var profile = duplicate ? (Catalog.Profiles.FirstOrDefault(item => item.Id == _selectedId)?.DeepClone() ?? new()) : new TerminalProfile
-        { Name = "新 Profile", ExecutablePath = "cmd.exe", Terminal = new() { UseGlobalFont = true } };
+        { Name = Localize.T("Text0390"), ExecutablePath = "cmd.exe", Terminal = new() { UseGlobalFont = true } };
         profile.Id = "profile-" + Guid.NewGuid().ToString("N");
-        if (duplicate) profile.Name += " 副本";
+        if (duplicate) profile.Name += Localize.T("Text0391");
         Catalog.Profiles.Add(profile);
         _host.ProfilesDraft!.SelectedProfileId = _selectedId = profile.Id;
         Reload(); ScheduleSave();
@@ -347,8 +347,8 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
     {
         if (_selectedId is null || !_host.CanEdit) return;
         if (_host.FormalSettings?.DefaultProfileId == _selectedId || _host.Draft?.Settings.DefaultProfileId == _selectedId)
-        { StatusChanged?.Invoke("请先更换并保存默认 Profile，再删除该项。"); return; }
-        if (MessageBox.Show(Window.GetWindow(this), "从 Profile 目录删除所选项？运行会话保持原样，之后不能用已删除项重启。", "删除 Profile", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        { StatusChanged?.Invoke(Localize.T("Text0392")); return; }
+        if (MessageBox.Show(Window.GetWindow(this), Localize.T("Text0393"), Localize.T("Text0394"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _host.EnsureProfilesDraft();
         Catalog.Profiles.RemoveAll(profile => profile.Id == _selectedId);
         _host.ProfilesDraft!.EditorValues.Remove(_selectedId);
@@ -360,7 +360,7 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
     {
         _debounce?.Cancel();
         if (Capture().Where(pair => pair.Key.StartsWith("agentRecipe.", StringComparison.Ordinal)).Any(pair => ArkTerminal.Core.Agents.AgentRecipeRules.ContainsSecret(pair.Value)))
-        { StatusChanged?.Invoke("Agent 字段含凭据，未保存。请先移除。"); return false; }
+        { StatusChanged?.Invoke(Localize.T("Text0395")); return false; }
         if (_host.ProfilesDraft is null) return true;
         foreach (var profile in Catalog.Profiles.ToArray())
         {
@@ -369,14 +369,14 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
             {
                 _host.ProfilesDraft.SelectedProfileId = _selectedId = profile.Id;
                 Reload();
-                StatusChanged?.Invoke("Profile 含字段错误，未保存；请修正行内提示。");
+                StatusChanged?.Invoke(Localize.T("Text0396"));
                 return false;
             }
             Catalog.Profiles[Catalog.Profiles.FindIndex(item => item.Id == profile.Id)] = candidate;
         }
         var result = await _host.SaveProfilesAsync();
         if (!result.Success) _host.Diagnostics.Record(DiagnosticComponent.Profiles, DiagnosticEventKind.WriteFailed);
-        StatusChanged?.Invoke(result.Success ? result.Warning ?? "Profile 已保存；新建或重启会话时使用新启动配置。" : result.Error ?? "Profile 保存失败。");
+        StatusChanged?.Invoke(result.Success ? result.Warning ?? Localize.T("Text0397") : result.Error ?? Localize.T("Text0398"));
         if (result.Success) { Reload(); CatalogSaved?.Invoke(); }
         return result.Success;
     }
@@ -385,7 +385,7 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
     {
         _debounce?.Cancel();
         var result = await _host.CancelProfilesDraftAsync();
-        StatusChanged?.Invoke(result.Success ? "Profile 草稿已取消。" : result.Error ?? "取消失败。");
+        StatusChanged?.Invoke(result.Success ? Localize.T("Text0399") : result.Error ?? Localize.T("Text0400"));
         if (result.Success) { Reload(); PreviewChanged?.Invoke(); }
         return result.Success;
     }

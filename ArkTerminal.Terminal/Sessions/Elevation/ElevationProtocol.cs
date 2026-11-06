@@ -40,7 +40,7 @@ internal static class ElevationProtocol
 
     internal static async Task SendAsync(Stream pipe, ElevationMessage type, ReadOnlyMemory<byte> payload, CancellationToken token)
     {
-        if (payload.Length + 1 > MaxFrameBytes) throw new IOException("提权消息超出长度限制。");
+        if (payload.Length + 1 > MaxFrameBytes) throw new IOException(Localize.T("Text0526"));
         var header = new byte[5];
         BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length + 1); header[4] = (byte)type;
         await pipe.WriteAsync(header, token).ConfigureAwait(false);
@@ -52,7 +52,7 @@ internal static class ElevationProtocol
         var header = new byte[5];
         await pipe.ReadExactlyAsync(header, token).ConfigureAwait(false);
         var length = BinaryPrimitives.ReadInt32LittleEndian(header) - 1;
-        if (length < 0 || length >= MaxFrameBytes || !Enum.IsDefined((ElevationMessage)header[4])) throw new IOException("提权协议消息无效。");
+        if (length < 0 || length >= MaxFrameBytes || !Enum.IsDefined((ElevationMessage)header[4])) throw new IOException(Localize.T("Text0527"));
         var payload = new byte[length];
         await pipe.ReadExactlyAsync(payload, token).ConfigureAwait(false);
         return ((ElevationMessage)header[4], payload);
@@ -61,21 +61,21 @@ internal static class ElevationProtocol
     internal static VerifiedPeer VerifyPeer(PipeStream pipe, bool server, int expectedPid, long expectedStart, string executable, bool requireElevated)
     {
         var success = server ? GetNamedPipeClientProcessId(pipe.SafePipeHandle, out var pid) : GetNamedPipeServerProcessId(pipe.SafePipeHandle, out pid);
-        if (!success || pid != expectedPid) throw new IOException("提权 IPC 对端进程身份不匹配。");
+        if (!success || pid != expectedPid) throw new IOException(Localize.T("Text0528"));
         var handle = OpenProcess(0x1000 | 0x00100000, false, expectedPid); // QUERY_LIMITED_INFORMATION | SYNCHRONIZE
         if (handle.IsInvalid) { var error = Marshal.GetLastWin32Error(); handle.Dispose(); throw new Win32Exception(error); }
         try
         {
             if (WaitForSingleObject(handle, 0) != 258 || !GetProcessTimes(handle, out var creation, out _, out _, out _) ||
                 DateTime.FromFileTimeUtc(creation).Ticks != expectedStart ||
-                !string.Equals(ProcessPath(handle), executable, StringComparison.OrdinalIgnoreCase)) throw new IOException("提权 IPC 对端映像或进程寿命不匹配。");
+                !string.Equals(ProcessPath(handle), executable, StringComparison.OrdinalIgnoreCase)) throw new IOException(Localize.T("Text0529"));
             if (!OpenProcessToken(handle, 8, out var token)) throw new Win32Exception(Marshal.GetLastWin32Error());
             using (token)
             using (var identity = new WindowsIdentity(token.DangerousGetHandle()))
             using (var current = WindowsIdentity.GetCurrent())
             {
-                if (identity.User != current.User) throw new IOException("仅支持当前同一用户的 UAC 提权。");
-                if (requireElevated && !IsElevatedToken(token)) throw new IOException("辅助器未获得真实提升令牌。");
+                if (identity.User != current.User) throw new IOException(Localize.T("Text0530"));
+                if (requireElevated && !IsElevatedToken(token)) throw new IOException(Localize.T("Text0531"));
             }
             return new VerifiedPeer(handle); // Hold the kernel object, not just a reusable PID.
         }
@@ -134,7 +134,7 @@ public static class ElevationSupport
         {
             var length = 0;
             var result = GetCurrentPackageFullName(ref length, null);
-            return result == 15700 ? null : "MSIX 包身份模式的提权尚未通过安装与 allowElevation 能力验证，已禁用管理员启动；普通会话可用。";
+            return result == 15700 ? null : Localize.T("Text0532");
         }
     }
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern int GetCurrentPackageFullName(ref int length, StringBuilder? name);

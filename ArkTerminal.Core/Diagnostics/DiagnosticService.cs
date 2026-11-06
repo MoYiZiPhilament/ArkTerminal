@@ -97,7 +97,7 @@ public sealed class DiagnosticService : IAsyncDisposable
     public async Task<string> ExportAsync(string confirmedText, CancellationToken token = default)
     {
         var bytes = Encoding.UTF8.GetBytes(confirmedText);
-        if (bytes.Length > Options.MaxExportBytes) throw new InvalidOperationException("导出超过 1 MiB 上限，请先编辑预览。");
+        if (bytes.Length > Options.MaxExportBytes) throw new InvalidOperationException(Localize.T("Text0651"));
         return await Task.Run(async () =>
         {
             await _files.WaitAsync(token);

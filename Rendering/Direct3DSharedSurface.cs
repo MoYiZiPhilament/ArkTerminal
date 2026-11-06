@@ -101,7 +101,7 @@ public sealed class Direct3DSharedSurface : IDisposable
                     }
                     if (timeout.Elapsed > TimeSpan.FromMilliseconds(250))
                     {
-                        throw new TimeoutException("等待终端 GPU 绘制完成超时。");
+                        throw new TimeoutException(Localize.T("Text0409"));
                     }
                     System.Threading.Thread.Sleep(1);
                 }

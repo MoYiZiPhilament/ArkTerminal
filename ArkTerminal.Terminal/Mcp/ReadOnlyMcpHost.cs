@@ -13,8 +13,8 @@ public sealed class ReadOnlyMcpHost : IAsyncDisposable
     {
         internal Guid Id { get; } = Guid.NewGuid();
         internal int Pid { get; } = pid;
-        internal string Label = "未声明（名称不可信）";
-        internal string Status = "等待 UI 授权";
+        internal string Label = Localize.T("Text0498");
+        internal string Status = Localize.T("Text0042");
         internal McpReadGrant? Grant;
         internal int Revision;
         internal long Allowed, Denied;
@@ -34,7 +34,7 @@ public sealed class ReadOnlyMcpHost : IAsyncDisposable
     public event Action? Changed;
     public event Action<bool>? ReadCompleted;
     public event Action? GrantChanged;
-    public string Status { get; private set; } = "尚未启动";
+    public string Status { get; private set; } = Localize.T("Text0499");
 
     public ReadOnlyMcpHost(string bridgePath, Func<McpReadRequest, McpReadGrant, CancellationToken, Task<McpReadResponse>> read)
     { _bridgePath = Path.GetFullPath(bridgePath); _read = read; }
@@ -57,7 +57,7 @@ public sealed class ReadOnlyMcpHost : IAsyncDisposable
         {
             if (!_connections.TryGetValue(connectionId, out var connection)) return false;
             connection.Grant = grant; connection.Revision++;
-            connection.Status = grant is null ? "已拒绝 / 撤销" : "已授权一个会话";
+            connection.Status = grant is null ? Localize.T("Text0500") : Localize.T("Text0501");
         }
         GrantChanged?.Invoke(); Changed?.Invoke(); return true;
     }
@@ -72,7 +72,7 @@ public sealed class ReadOnlyMcpHost : IAsyncDisposable
                 var pipe = ElevationProtocol.CreateLocalServer(PipeName, McpLimits.MaxConnections + 1, first);
                 first = false;
                 _listener = pipe;
-                Status = "只读桥已就绪；每个连接需单独授权。";
+                Status = Localize.T("Text0502");
                 await pipe.WaitForConnectionAsync(_lifetime.Token).ConfigureAwait(false);
                 _listener = null;
                 lock (_sync)
@@ -85,7 +85,7 @@ public sealed class ReadOnlyMcpHost : IAsyncDisposable
             }
         }
         catch (Exception error) when (error is IOException or System.ComponentModel.Win32Exception or OperationCanceledException or ObjectDisposedException)
-        { Status = _lifetime.IsCancellationRequested ? "已停止" : "只读桥不可用（本机管道创建失败）。"; }
+        { Status = _lifetime.IsCancellationRequested ? Localize.T("Text0503") : Localize.T("Text0504"); }
         finally { _listener?.Dispose(); _listener = null; Changed?.Invoke(); }
     }
 
@@ -144,7 +144,7 @@ public sealed class ReadOnlyMcpHost : IAsyncDisposable
         var field = McpLimits.RequiredField(request.Tool);
         lock (_sync)
         {
-            connection.Label = ContextText.SafeField(request.ClientLabel ?? "未声明", 128);
+            connection.Label = ContextText.SafeField(request.ClientLabel ?? Localize.T("Text0505"), 128);
             grant = connection.Grant; revision = connection.Revision;
             var denial = field == McpReadFields.None ? "unknown_tool" : grant is null ? "unauthorized" :
                 !grant.Fields.HasFlag(field) ? "field_denied" :

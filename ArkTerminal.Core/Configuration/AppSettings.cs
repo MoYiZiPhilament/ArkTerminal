@@ -1,3 +1,5 @@
+using ArkTerminal.Core.Localization;
+
 namespace ArkTerminal.Core.Configuration;
 
 public sealed class AppSettings
@@ -5,6 +7,7 @@ public sealed class AppSettings
     public int SchemaVersion { get; set; } = ConfigurationDefaults.CurrentSchemaVersion;
     public AppearanceSettings Appearance { get; set; } = new();
     public string? DefaultProfileId { get; set; } = "cmd";
+    public RegionalSettings Regional { get; set; } = new();
     public HistoryPolicy History { get; set; } = new();
     public TranscriptionPolicy Transcription { get; set; } = new();
     public WorkbenchSettings Workbench { get; set; } = new();
@@ -15,11 +18,19 @@ public sealed class AppSettings
         SchemaVersion = SchemaVersion,
         DefaultProfileId = DefaultProfileId,
         Appearance = Appearance.DeepClone(),
+        Regional = Regional.DeepClone(),
         History = History.DeepClone(),
         Transcription = Transcription.DeepClone(),
         Workbench = Workbench.DeepClone(),
         ShellNotifications = ShellNotifications.DeepClone()
     };
+}
+
+public sealed class RegionalSettings
+{
+    public string Language { get; set; } = LocalizationDefaults.SystemLanguage();
+    public string TimeZoneId { get; set; } = TimeZoneInfo.Local.Id;
+    public RegionalSettings DeepClone() => (RegionalSettings)MemberwiseClone();
 }
 
 public enum TerminalTabPosition

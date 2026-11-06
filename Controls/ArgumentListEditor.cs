@@ -11,7 +11,7 @@ public sealed class ArgumentListEditor : StackPanel
     public ArgumentListEditor()
     {
         Children.Add(_rows);
-        var add = new Button { Content = "+ 添加一个参数（允许空参数）", HorizontalAlignment = HorizontalAlignment.Left, Margin = new(0, 4, 0, 4) };
+        var add = new Button { Content = Localize.T("Text0293"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new(0, 4, 0, 4) };
         add.Click += (_, _) => { AddRow(string.Empty); Changed?.Invoke(); };
         Children.Add(add);
     }
@@ -26,7 +26,7 @@ public sealed class ArgumentListEditor : StackPanel
     private void AddRow(string value)
     {
         var row = new DockPanel { Margin = new(0, 2, 0, 2) };
-        var remove = new Button { Content = "删除", Margin = new(6, 0, 0, 0) };
+        var remove = new Button { Content = Localize.T("Text0294"), Margin = new(6, 0, 0, 0) };
         DockPanel.SetDock(remove, Dock.Right);
         remove.Click += (_, _) => { _rows.Children.Remove(row); Changed?.Invoke(); };
         row.Children.Add(remove);

@@ -56,7 +56,7 @@ public sealed class TerminalTabsViewModel
     {
         if (Tabs.Count >= 100)
         {
-            throw new InvalidOperationException("标签数量已达到 100 个上限。");
+            throw new InvalidOperationException(Localize.T("Text0420"));
         }
         var tab = new TabViewModel(launch) { FixedTitle = fixedTitle, IsRecoveredPlaceholder = recovered };
         Tabs.Add(tab);
@@ -226,7 +226,7 @@ public sealed class TerminalTabsViewModel
             var request = tab.Launch.Request;
             if (request.AgentRecipe is not null)
             {
-                request = PrepareAgentLaunch is null ? throw new InvalidOperationException("Agent 启动入口尚未就绪。") : await PrepareAgentLaunch(tab, request);
+                request = PrepareAgentLaunch is null ? throw new InvalidOperationException(Localize.T("Text0421")) : await PrepareAgentLaunch(tab, request);
                 if (request is null) { tab.State = TabRuntimeState.NotStarted; return; }
             }
             if (request.RunAsAdministrator)

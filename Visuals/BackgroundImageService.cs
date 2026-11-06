@@ -31,12 +31,12 @@ public sealed class BackgroundImageService(IAppDataPaths paths)
             };
             if (expectedFormat == Guid.Empty)
             {
-                return Failure("仅支持 PNG、JPEG、BMP 背景图。");
+                return Failure(Localize.T("Text0426"));
             }
             var info = new FileInfo(sourcePath);
             if (!info.Exists || info.Length <= 0 || info.Length > VisualSettingsLimits.MaxBackgroundFileBytes)
             {
-                return Failure($"图片不存在、为空或超过 {VisualSettingsLimits.MaxBackgroundFileBytes / 1024 / 1024} MiB 上限。");
+                return Failure(Localize.F("Text0427", VisualSettingsLimits.MaxBackgroundFileBytes / 1024 / 1024));
             }
             return await Task.Run(() =>
             {
@@ -77,7 +77,7 @@ public sealed class BackgroundImageService(IAppDataPaths paths)
         }
         catch (Exception exception) when (IsImageOrIoError(exception))
         {
-            return Failure($"背景图导入失败：{exception.Message}");
+            return Failure(Localize.F("Text0231", exception.Message));
         }
     }
 
@@ -93,7 +93,7 @@ public sealed class BackgroundImageService(IAppDataPaths paths)
             var fullPath = ResolvePath(resourcePath);
             if (fullPath is null)
             {
-                return new(null, "背景路径不在应用 Backgrounds 目录内。");
+                return new(null, Localize.T("Text0428"));
             }
             return await Task.Run(() =>
             {
@@ -101,7 +101,7 @@ public sealed class BackgroundImageService(IAppDataPaths paths)
                 var info = new FileInfo(fullPath);
                 if (!info.Exists || info.Length <= 0 || info.Length > VisualSettingsLimits.MaxBackgroundFileBytes)
                 {
-                    return new BackgroundLoadResult(null, "背景副本不存在、为空或超过大小上限。");
+                    return new BackgroundLoadResult(null, Localize.T("Text0429"));
                 }
                 using var stream = OpenRead(fullPath);
                 var decoder = Decode(stream);
@@ -138,7 +138,7 @@ public sealed class BackgroundImageService(IAppDataPaths paths)
         }
         catch (Exception exception) when (IsImageOrIoError(exception))
         {
-            return new(null, $"背景图加载失败：{exception.Message}");
+            return new(null, Localize.F("Text0430", exception.Message));
         }
     }
 
@@ -189,12 +189,12 @@ public sealed class BackgroundImageService(IAppDataPaths paths)
     {
         if ((long)frame.PixelWidth * frame.PixelHeight <= 0 || (long)frame.PixelWidth * frame.PixelHeight > VisualSettingsLimits.MaxBackgroundPixels)
         {
-            throw new InvalidDataException($"解码像素超过 {VisualSettingsLimits.MaxBackgroundPixels:N0} 上限。");
+            throw new InvalidDataException(Localize.F("Text0431", VisualSettingsLimits.MaxBackgroundPixels));
         }
         var format = frame.Decoder.CodecInfo.ContainerFormat;
         if (format != PngFormat && format != JpegFormat && format != BmpFormat || expectedFormat is { } expected && format != expected)
         {
-            throw new InvalidDataException("图片真实解码格式与允许格式或扩展名不一致。");
+            throw new InvalidDataException(Localize.T("Text0432"));
         }
     }
 

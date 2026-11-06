@@ -53,28 +53,28 @@ public static class TerminalLinks
 
     public static TerminalLink Resolve(string display, string target, string? cwd)
     {
-        if (string.IsNullOrWhiteSpace(target) || target.Length > 4096 || Hidden(target) || Hidden(display)) throw new ArgumentException("链接包含隐蔽控制字符或目标过长。");
+        if (string.IsNullOrWhiteSpace(target) || target.Length > 4096 || Hidden(target) || Hidden(display)) throw new ArgumentException(Localize.T("Text0491"));
         if (Uri.TryCreate(target, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
         {
             if (string.IsNullOrEmpty(uri.Host) || !string.IsNullOrEmpty(uri.UserInfo) || Hidden(Uri.UnescapeDataString(target)))
-                throw new ArgumentException("URL 的主机、用户信息或控制字符无效。");
+                throw new ArgumentException(Localize.T("Text0492"));
             return new(display, uri.AbsoluteUri, true);
         }
         if (target.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
         {
-            if (!Uri.TryCreate(target, UriKind.Absolute, out var fileUri) || !fileUri.IsFile || fileUri.IsUnc) throw new ArgumentException("只允许本地文件链接。");
+            if (!Uri.TryCreate(target, UriKind.Absolute, out var fileUri) || !fileUri.IsFile || fileUri.IsUnc) throw new ArgumentException(Localize.T("Text0493"));
             target = fileUri.LocalPath;
         }
         else if (Regex.IsMatch(target, @"^[a-zA-Z][a-zA-Z0-9+.-]*:") && !Regex.IsMatch(target, @"^[a-zA-Z]:[\\/]"))
-            throw new ArgumentException("只允许 http、https 与本地文件；不支持自定义协议。");
+            throw new ArgumentException(Localize.T("Text0494"));
         if (Hidden(target) || target.IndexOfAny(Path.GetInvalidPathChars()) >= 0 || target.IndexOfAny(['*', '?', '"', '<', '>', '|']) >= 0 ||
             target.StartsWith("\\\\", StringComparison.Ordinal) || target.StartsWith("//", StringComparison.Ordinal) || target.Skip(2).Contains(':'))
-            throw new ArgumentException("不允许网络、设备路径或备用数据流。");
+            throw new ArgumentException(Localize.T("Text0495"));
         if (!Path.IsPathFullyQualified(target))
         {
             if (string.IsNullOrWhiteSpace(cwd) || !Path.IsPathFullyQualified(cwd) || cwd.StartsWith("\\\\", StringComparison.Ordinal))
-                throw new ArgumentException("没有可靠的当前目录，无法解析相对路径。");
-            if (target.Contains(':') || target.StartsWith('\\') || target.StartsWith('/')) throw new ArgumentException("相对路径格式不明确。");
+                throw new ArgumentException(Localize.T("Text0496"));
+            if (target.Contains(':') || target.StartsWith('\\') || target.StartsWith('/')) throw new ArgumentException(Localize.T("Text0497"));
             target = Path.Combine(cwd, target);
         }
         return new(display, Path.GetFullPath(target), false);

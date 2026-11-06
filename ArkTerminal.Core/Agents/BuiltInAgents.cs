@@ -12,7 +12,7 @@ public static class BuiltInAgents
         {
             Id = "deepseek-harness", DisplayName = "DeepSeek Harness", ExecutableCandidates = Candidates("dsh"),
             VersionProbe = new(), Evidence = "https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/README.md",
-            UnsupportedReason = "dsh 的内置模式为 Web / headless / SDK / ACP；交互 TUI 需另装 Profile，不能由版本成功推断。请用已审核的 JSON 声明实际 TUI。"
+            UnsupportedReason = Localize.T("Text0591")
         },
         Agent("claude-code", "Claude Code", "claude", "https://code.claude.com/docs/en/cli-reference",
             permissions: new() { ["default"] = ["--permission-mode", "default"], ["plan"] = ["--permission-mode", "plan"], ["acceptEdits"] = ["--permission-mode", "acceptEdits"] },

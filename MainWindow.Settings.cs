@@ -24,7 +24,7 @@ public partial class MainWindow
         TerminalLineHeightInput, TerminalSpacingInput, AccentInput, HotkeyInput, FocusHotkeyInput, AuroraColorsInput, LongTaskSecondsInput];
     private CheckBox[] SettingsCheckInputs => [LigaturesInput, TimestampsInput, LineNumbersInput, DurationInput, HotkeyEnabledInput,
         FocusHotkeyEnabledInput, ConfirmCloseInput, DesktopBackgroundInput, AuroraEnabledInput, NotifyCompletedInput, NotifyLongTaskInput, NotifyReadyInput];
-    private ComboBox[] SettingsChoiceInputs => [TabPositionInput, DefaultProfileInput, ThemeInput, MaterialInput, AuroraPresetInput, BackgroundFitInput, BackgroundPositionInput];
+    private ComboBox[] SettingsChoiceInputs => [TabPositionInput, DefaultProfileInput, LanguageInput, TimeZoneInput, ThemeInput, MaterialInput, AuroraPresetInput, BackgroundFitInput, BackgroundPositionInput];
     private Slider[] SettingsSliderInputs => [BackgroundOverlayInput, BackgroundBlurInput, BackgroundBrightnessInput, BackgroundSaturationInput, TerminalOpacityInput];
 
     private void InitializeStageSix()
@@ -42,7 +42,8 @@ public partial class MainWindow
         TerminalView.ViewportChanged += UpdateAuxiliaryDisplay;
         _visuals.PresentationChanged += UpdateFontPreviews;
         InitializeStageSixCommands();
-        SettingsDataRootText.Text = $"模式：{_host.Paths.Mode}\n数据目录：{_host.Paths.RootDirectory}";
+        TimeZoneInput.ItemsSource = TimeZoneInfo.GetSystemTimeZones();
+        SettingsDataRootText.Text = Localize.F("Text0125", _host.Paths.Mode, _host.Paths.RootDirectory);
         _stageSixReady = true;
         StateChanged += (_, _) => UpdatePerformanceSampling();
         IsVisibleChanged += (_, _) => UpdatePerformanceSampling();
@@ -54,7 +55,7 @@ public partial class MainWindow
         var initializing = _initializing;
         _initializing = true;
         var selected = DefaultProfileInput.SelectedValue as string ?? _host.FormalSettings?.DefaultProfileId ?? string.Empty;
-        DefaultProfileInput.ItemsSource = new[] { new TerminalProfile { Id = string.Empty, Name = "未设置" } }.Concat(_host.Catalog?.Profiles ?? []);
+        DefaultProfileInput.ItemsSource = new[] { new TerminalProfile { Id = string.Empty, Name = Localize.T("Text0126") } }.Concat(_host.Catalog?.Profiles ?? []);
         DefaultProfileInput.SelectedValue = selected;
         _initializing = initializing;
     }
@@ -84,6 +85,8 @@ public partial class MainWindow
         FocusHotkeyInput.Text = settings.Workbench.FocusModeHotkey;
         RefreshDefaultProfiles();
         DefaultProfileInput.SelectedValue = settings.DefaultProfileId ?? string.Empty;
+        LanguageInput.SelectedValue = settings.Regional.Language;
+        TimeZoneInput.SelectedValue = settings.Regional.TimeZoneId;
         HistoryEnabledInput.IsChecked = _host.CommandHistory.Enabled;
         TranscriptionEnabledInput.IsChecked = _tabs.ActiveTab.Session is { } recordingSession && _host.Transcripts.GetStatus(recordingSession.Id).Recording;
         NotifyCompletedInput.IsChecked = settings.ShellNotifications.CommandCompletedEnabled;
@@ -98,7 +101,7 @@ public partial class MainWindow
         SelectTaggedItem(AuroraPresetInput, visual.AuroraPresetId);
         AuroraColorsInput.Text = string.Join(", ", visual.AuroraCustomColors);
         _previewBackgroundPath = visual.BackgroundImagePath;
-        BackgroundPathText.Text = string.IsNullOrEmpty(_previewBackgroundPath) ? "未设置" : System.IO.Path.GetFileName(_previewBackgroundPath);
+        BackgroundPathText.Text = string.IsNullOrEmpty(_previewBackgroundPath) ? Localize.T("Text0126") : System.IO.Path.GetFileName(_previewBackgroundPath);
         BackgroundOverlayInput.Value = visual.BackgroundOverlayOpacity;
         BackgroundBlurInput.Value = visual.BackgroundBlurRadius;
         BackgroundBrightnessInput.Value = visual.BackgroundBrightness;
@@ -117,7 +120,9 @@ public partial class MainWindow
     {
         var result = SettingsTextInputs.ToDictionary(input => input.Name, input => input.Text);
         foreach (var input in SettingsCheckInputs) result[input.Name] = (input.IsChecked == true).ToString();
-        foreach (var input in SettingsChoiceInputs) result[input.Name] = input == DefaultProfileInput ? input.SelectedValue as string ?? string.Empty : GetTag(input);
+        foreach (var input in SettingsChoiceInputs) result[input.Name] = !string.IsNullOrEmpty(input.SelectedValuePath)
+            ? input.SelectedValue as string ?? string.Empty
+            : GetTag(input);
         foreach (var input in SettingsSliderInputs) result[input.Name] = input.Value.ToString(CultureInfo.InvariantCulture);
         result["BackgroundImagePath"] = _previewBackgroundPath;
         return result;
@@ -132,7 +137,7 @@ public partial class MainWindow
             {
                 case TextBox text: text.Text = value; break;
                 case CheckBox check when bool.TryParse(value, out var flag): check.IsChecked = flag; break;
-                case ComboBox combo when combo == DefaultProfileInput: combo.SelectedValue = value; break;
+                case ComboBox combo when !string.IsNullOrEmpty(combo.SelectedValuePath): combo.SelectedValue = value; break;
                 case ComboBox combo: SelectTaggedItem(combo, value); break;
                 case Slider slider when double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number): slider.Value = number; break;
             }
@@ -165,10 +170,10 @@ public partial class MainWindow
             {
                 var label = input.Name switch
                 {
-                    "FontSizeInput" => "UI 字号", "TerminalFontSizeInput" => "终端字号", "TerminalWeightInput" => "终端字重",
-                    "TerminalLineHeightInput" => "行高倍数", "TerminalSpacingInput" => "字距", _ => "数值"
+                    "FontSizeInput" => Localize.T("Text0127"), "TerminalFontSizeInput" => Localize.T("Text0128"), "TerminalWeightInput" => Localize.T("Text0129"),
+                    "TerminalLineHeightInput" => Localize.T("Text0130"), "TerminalSpacingInput" => Localize.T("Text0131"), _ => Localize.T("Text0132")
                 };
-                Error(input, $"{label}：请输入 {min}—{max} 的数值。"); return min;
+                Error(input, Localize.F("Text0133", label, min, max)); return min;
             }
             return value;
         }
@@ -177,7 +182,7 @@ public partial class MainWindow
         preview.Appearance.TerminalFontFamily = TerminalFontInput.Text;
         preview.Appearance.TerminalFontSize = Number(TerminalFontSizeInput, 6, 96);
         var weight = Number(TerminalWeightInput, 100, 1000);
-        if (weight != Math.Truncate(weight)) Error(TerminalWeightInput, "终端字重须为整数。");
+        if (weight != Math.Truncate(weight)) Error(TerminalWeightInput, Localize.T("Text0134"));
         preview.Appearance.TerminalFontWeight = (int)weight;
         preview.Appearance.TerminalLineHeight = Number(TerminalLineHeightInput, 0.75, 3);
         preview.Appearance.TerminalCharacterSpacing = Number(TerminalSpacingInput, -4, 16);
@@ -188,6 +193,8 @@ public partial class MainWindow
         preview.Appearance.AccentColor = AccentInput.Text;
         preview.DefaultProfileId = DefaultProfileInput.SelectedValue as string;
         if (string.IsNullOrEmpty(preview.DefaultProfileId)) preview.DefaultProfileId = null;
+        preview.Regional.Language = LanguageInput.SelectedValue as string ?? LocalizationDefaults.English;
+        preview.Regional.TimeZoneId = TimeZoneInput.SelectedValue as string ?? TimeZoneInfo.Local.Id;
         preview.Workbench.TabPosition = Enum.Parse<TerminalTabPosition>(GetTag(TabPositionInput));
         preview.Workbench.ConfirmCloseRunning = ConfirmCloseInput.IsChecked == true;
         preview.Workbench.CommandPaletteHotkeyEnabled = HotkeyEnabledInput.IsChecked == true;
@@ -198,7 +205,7 @@ public partial class MainWindow
         preview.ShellNotifications.LongTaskEnabled = NotifyLongTaskInput.IsChecked == true;
         preview.ShellNotifications.ReadyForInputEnabled = NotifyReadyInput.IsChecked == true;
         var longTask = Number(LongTaskSecondsInput, 1, 86400);
-        if (longTask != Math.Truncate(longTask)) Error(LongTaskSecondsInput, "长任务门槛须为整数秒。");
+        if (longTask != Math.Truncate(longTask)) Error(LongTaskSecondsInput, Localize.T("Text0135"));
         preview.ShellNotifications.LongTaskSeconds = (int)longTask;
         if (!GlobalHotkeyService.Validate(preview.Workbench, out var hotkeyError)) Error(HotkeyInput, hotkeyError);
         var visual = preview.Appearance.Visual;
@@ -251,7 +258,7 @@ public partial class MainWindow
         FontPreview.ApplyVisualStyle(TerminalView.VisualStyle);
         _profileEditor.FontPreview.AttachPreview(TerminalFontOptions.Resolve(appearance, _profileEditor.PreviewProfile));
         _profileEditor.FontPreview.ApplyVisualStyle(TerminalView.VisualStyle);
-        FontPreviewSource.Text = "终端字体预览";
+        FontPreviewSource.Text = Localize.T("Text0136");
         if (_attachedTab?.Session is not null)
             TerminalView.SetFontBaseline(EffectiveFont(_attachedTab), TerminalView.HasUserZoom ? TerminalView.CurrentFontSize : null);
         UpdateAuxiliaryDisplay();
@@ -285,16 +292,16 @@ public partial class MainWindow
         LineMetadataItems.ItemsSource = snapshot is null || appearance is null || (!appearance.ShowTimestamps && !appearance.ShowLogicalLineNumbers) ? null :
             snapshot.Lines.Select(line => new MetadataRow(snapshot.IsAlternateScreen ? "—" : line.LogicalLineNumber is null && line.FirstOutputAtUtc is null ? string.Empty :
                 (appearance.ShowLogicalLineNumbers ? (line.LogicalLineNumber?.ToString(CultureInfo.InvariantCulture) ?? "—") + "  " : string.Empty) +
-                (appearance.ShowTimestamps ? line.FirstOutputAtUtc?.ToLocalTime().ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "—" : string.Empty), TerminalView.LineHeight)).ToArray();
+                (appearance.ShowTimestamps ? line.FirstOutputAtUtc is { } outputAt ? Localize.ToConfiguredTime(outputAt).ToString("HH:mm:ss.fff", Localize.Current.Culture) : "—" : string.Empty), TerminalView.LineHeight)).ToArray();
         CommandDurationText.Visibility = appearance?.ShowCommandDuration == true ? Visibility.Visible : Visibility.Collapsed;
-        CommandDurationText.Text = "耗时：未知";
+        CommandDurationText.Text = Localize.T("Text0137");
         UpdateShellDisplay();
     }
 
     private void SettingsCategory_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (!_stageSixReady || e.Source != SettingsCategories) return;
-        SettingsSectionTitle.Text = (SettingsCategories.SelectedItem as TabItem)?.Header as string ?? "设置";
+        SettingsSectionTitle.Text = (SettingsCategories.SelectedItem as TabItem)?.Header as string ?? Localize.T("Text0039");
         ProfileSaveBar.Visibility = SettingsCategories.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
         UpdateFontPreviews();
         if (SettingsCategories.Template.FindName("PART_SelectedContentHost", SettingsCategories) is FrameworkElement content)
@@ -307,8 +314,8 @@ public partial class MainWindow
     {
         if (!_host.CanEdit) return;
         var index = SettingsCategories.SelectedIndex;
-        if (index > 2) { StatusText.Text = "诊断与数据没有可恢复的设置；清理使用独立入口。"; return; }
-        if (MessageBox.Show(this, "仅将当前分类恢复默认并进入草稿；Profile 目录和背景原图不变。保存后才持久化，取消可撤回。", "恢复默认", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (index > 2) { StatusText.Text = Localize.T("Text0138"); return; }
+        if (MessageBox.Show(this, Localize.T("Text0139"), Localize.T("Text0140"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         RestoreCategoryDefaults(index);
     }
 
@@ -349,10 +356,10 @@ public partial class MainWindow
 
     private async void SaveProfiles_Click(object sender, RoutedEventArgs e) => await SaveProfilesWithLockAsync();
     private async void CancelProfiles_Click(object sender, RoutedEventArgs e) => await _profileEditor.CancelAsync();
-    private async void RetryCleanup_Click(object sender, RoutedEventArgs e) => ShowResult(await _host.RetryDraftCleanupAsync(), "恢复草稿残留已清理。");
+    private async void RetryCleanup_Click(object sender, RoutedEventArgs e) => ShowResult(await _host.RetryDraftCleanupAsync(), Localize.T("Text0141"));
     private async void ReloadFormal_Click(object sender, RoutedEventArgs e)
     {
-        if (!ShowResult(await _host.ReloadFormalAsync(), "已读取最新正式配置；原草稿及冲突保护保留。取消冲突草稿后再开始新编辑。")) return;
+        if (!ShowResult(await _host.ReloadFormalAsync(), Localize.T("Text0142"))) return;
         ProfilesList.ItemsSource = _host.Catalog?.Profiles;
         LoadSettingsControls(_host.Draft?.Settings ?? _host.FormalSettings);
         RestoreSettingsEditor();
@@ -366,8 +373,8 @@ public partial class MainWindow
     {
         if (_host.FormalSettings is null) return;
         _commandKeys.Configure(_host.FormalSettings.Workbench, _hotkey.IsRegistered, _hotkey.IsFocusRegistered);
-        CommandPaletteButton.ToolTip = "命令面板" + (_host.FormalSettings.Workbench.CommandPaletteHotkeyEnabled ? "  " + _host.FormalSettings.Workbench.CommandPaletteHotkey : string.Empty);
-        TerminalShortcutHint.Text = "Ctrl+Shift+C/V 复制/粘贴 · Ctrl+F 搜索 · Ctrl+Tab 切换 · Ctrl+单击查看链接目标 · 全部手势见设置";
+        CommandPaletteButton.ToolTip = Localize.T("Text0080") + (_host.FormalSettings.Workbench.CommandPaletteHotkeyEnabled ? "  " + _host.FormalSettings.Workbench.CommandPaletteHotkey : string.Empty);
+        TerminalShortcutHint.Text = Localize.T("Text0143");
     }
 
     private async Task<bool> SaveDraftAsync()
@@ -389,5 +396,5 @@ public partial class MainWindow
     }
 
     private void DirectoryInput_TextChanged(object sender, TextChangedEventArgs e) { if (_stageSixReady && !_initializing) _directoryExplicit = true; }
-    private void UseProfileDirectory_Click(object sender, RoutedEventArgs e) { _directoryExplicit = false; StatusText.Text = "下一次选择 Profile 时使用其保存的 cwd；目录框暂不覆盖。"; }
+    private void UseProfileDirectory_Click(object sender, RoutedEventArgs e) { _directoryExplicit = false; StatusText.Text = Localize.T("Text0144"); }
 }

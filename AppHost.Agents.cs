@@ -25,7 +25,7 @@ public sealed partial class AppHost
         try
         {
             var definition = AgentAdapters.Entries.FirstOrDefault(entry => entry.Enabled && entry.Error is null && entry.Definition?.Id == recipe.AgentId)?.Definition
-                ?? throw new ArgumentException("Agent ID 不存在或适配器未启用。请从新建页的 Agent 区生成配方。");
+                ?? throw new ArgumentException(Localize.T("Text0004"));
             AgentRecipeRules.BuildArguments(definition, recipe, recipe.WorkingDirectory);
             return null;
         }
@@ -42,7 +42,7 @@ public sealed partial class AppHost
             if (ValidateAgentRecipe(profile.AgentRecipe) is { } error && !SameDocument(profile.AgentRecipe, formal?.AgentRecipe)) return error;
             if (ProfilesDraft.EditorValues.TryGetValue(profile.Id, out var values) &&
                 values.Where(pair => pair.Key.StartsWith("agentRecipe.", StringComparison.Ordinal)).Any(pair => AgentRecipeRules.ContainsSecret(pair.Value)))
-                return "Agent 草稿含凭据字段，未写盘。";
+                return Localize.T("Text0005");
         }
         return null;
     }
@@ -51,7 +51,7 @@ public sealed partial class AppHost
     {
         if (ValidateAgentRecipe(profile.AgentRecipe) is { } error) return Failure(error);
         EnsureProfilesDraft();
-        if (ProfilesDraft!.Catalog.Profiles.Count >= 100) return Failure("Profile 数量已达上限。");
+        if (ProfilesDraft!.Catalog.Profiles.Count >= 100) return Failure(Localize.T("Text0006"));
         ProfilesDraft.Catalog.Profiles.Add(profile.DeepClone());
         ProfilesDraft.SelectedProfileId = profile.Id;
         return await PersistProfilesDraftAsync();

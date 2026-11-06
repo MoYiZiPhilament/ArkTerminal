@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -21,6 +21,7 @@ public sealed class GlobalHotkeyService : IDisposable
     public event Action? FocusInvoked;
     public event Action? ContextInvoked;
     public string StatusText { get; private set; } = string.Empty;
+    public void RefreshLocalization() { if (!string.IsNullOrEmpty(StatusText)) StatusText = Describe(); }
     public bool IsRegistered => _registered;
     public bool IsFocusRegistered => _focusRegistered;
     public bool IsContextRegistered => _contextRegistered;
@@ -35,13 +36,13 @@ public sealed class GlobalHotkeyService : IDisposable
         error = string.Empty;
         foreach (var gesture in new[] { settings.CommandPaletteHotkey, settings.FocusModeHotkey })
         {
-            if (!TryParse(gesture, out var modifiers, out var key)) { error = "热键须包含修饰键和一个普通键。"; return false; }
-            if (IsReserved(modifiers, key)) { error = "热键与固定终端或编辑手势冲突；Ctrl+C 始终保留中断语义。"; return false; }
+            if (!TryParse(gesture, out var modifiers, out var key)) { error = Localize.T("Text0401"); return false; }
+            if (IsReserved(modifiers, key)) { error = Localize.T("Text0402"); return false; }
         }
         TryParse(settings.CommandPaletteHotkey, out var pm, out var pk);
         TryParse(settings.FocusModeHotkey, out var fm, out var fk);
         if (settings.CommandPaletteHotkeyEnabled && settings.FocusModeHotkeyEnabled && pm == fm && pk == fk)
-        { error = "两项全局热键不能相同。"; return false; }
+        { error = Localize.T("Text0403"); return false; }
         return true;
     }
 
@@ -55,7 +56,7 @@ public sealed class GlobalHotkeyService : IDisposable
 
     public bool Configure(ArkTerminal.Core.Configuration.WorkbenchSettings settings, out string error)
     {
-        if (_disposed || _source is null) { error = "窗口尚未准备好。"; return false; }
+        if (_disposed || _source is null) { error = Localize.T("Text0404"); return false; }
         if (!Validate(settings, out error)) return false;
         if (_settings.CommandPaletteHotkeyEnabled == settings.CommandPaletteHotkeyEnabled && _settings.CommandPaletteHotkey == settings.CommandPaletteHotkey &&
             _settings.FocusModeHotkeyEnabled == settings.FocusModeHotkeyEnabled && _settings.FocusModeHotkey == settings.FocusModeHotkey &&
@@ -66,7 +67,7 @@ public sealed class GlobalHotkeyService : IDisposable
         {
             Unregister();
             var restored = Register(previous, out _);
-            StatusText = "注册失败：" + error + (restored ? "；旧组合已恢复。" : "；旧组合未能全部恢复，请查看各项状态。") + Describe();
+            StatusText = Localize.T("Text0405") + error + (restored ? Localize.T("Text0406") : Localize.T("Text0407")) + Describe();
             return false;
         }
         _settings = settings.DeepClone();
@@ -92,7 +93,7 @@ public sealed class GlobalHotkeyService : IDisposable
         return true;
     }
 
-    private string Describe() => $" 命令面板：{(_registered ? "已注册" : "未注册/禁用")}；专注模式：{(_focusRegistered ? "已注册" : "未注册/禁用")}；上下文 Ctrl+Shift+F9：{(_contextRegistered ? "已注册" : "被占用；使用命令面板")}。";
+    private string Describe() => Localize.F("Text0408", (_registered ? Localize.T("Text0837") : Localize.T("Text0838")), (_focusRegistered ? Localize.T("Text0837") : Localize.T("Text0838")), (_contextRegistered ? Localize.T("Text0837") : Localize.T("Text0839")));
     public void Dispose()
     {
         if (_disposed) return;

@@ -18,12 +18,12 @@ public static class EnvironmentRows
             var path = $"environment.line[{index + 1}]";
             if (separator < 0 || string.IsNullOrWhiteSpace(name) || name.IndexOfAny(['\0', '\r', '\n']) >= 0)
             {
-                issues.Add(new(path, "需要非空名称和等号：KEY=VALUE。"));
+                issues.Add(new(path, Localize.T("Text0652")));
                 continue;
             }
             var value = line[(separator + 1)..];
-            if (value.Contains('\0')) issues.Add(new(path, "值不能包含 NUL。"));
-            else if (!values.TryAdd(name, value)) issues.Add(new(path, "名称重复（不区分大小写）。"));
+            if (value.Contains('\0')) issues.Add(new(path, Localize.T("Text0653")));
+            else if (!values.TryAdd(name, value)) issues.Add(new(path, Localize.T("Text0654")));
         }
         return ValidationResult.FromIssues(issues);
     }

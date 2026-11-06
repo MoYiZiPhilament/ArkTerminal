@@ -14,13 +14,13 @@ public static class AppDataPathsFactory
         }
         catch (Exception exception)
         {
-            return Error(null, $"无法检测应用包身份：{exception.Message}");
+            return Error(null, Localize.F("Text0647", exception.Message));
         }
 
         var portableRequested = arguments.Contains("--portable", StringComparer.OrdinalIgnoreCase);
         if (packageFamilyName is not null && portableRequested)
         {
-            return Error(AppContext.BaseDirectory, "MSIX 包身份下不适用便携模式；未写入其他数据目录。");
+            return Error(AppContext.BaseDirectory, Localize.T("Text0648"));
         }
 
         AppDataMode mode;
@@ -50,7 +50,7 @@ public static class AppDataPathsFactory
         }
         catch (Exception exception)
         {
-            return Error(AppContext.BaseDirectory, $"无法确定数据目录：{exception.Message}");
+            return Error(AppContext.BaseDirectory, Localize.F("Text0649", exception.Message));
         }
 
         var paths = new AppDataPaths(mode, Path.GetFullPath(root));
@@ -76,7 +76,7 @@ public static class AppDataPathsFactory
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            return Error(paths.RootDirectory, $"数据目录不可写：{exception.Message}");
+            return Error(paths.RootDirectory, Localize.F("Text0650", exception.Message));
         }
     }
 

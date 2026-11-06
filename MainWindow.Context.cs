@@ -47,24 +47,24 @@ public partial class MainWindow
                 lock (_mcp) _mcpRefreshPending = false;
                 var connections = _mcp.Connections;
                 _mcpNotified.RemoveWhere(id => connections.All(c => c.Id != id));
-                if (connections.Any(c => c.Status == "等待 UI 授权" && _mcpNotified.Add(c.Id)))
+                if (connections.Any(c => c.Status == Localize.T("Text0042") && _mcpNotified.Add(c.Id)))
                 {
-                    StatusText.Text = "有本机 MCP 连接等待披露授权；默认拒绝读取。可从应用菜单管理。";
+                    StatusText.Text = Localize.T("Text0043");
                     if (!_closing && _mcpWindow is null) ShowMcpAccess();
                 }
             });
         };
         _mcp.Start();
         void Add(string id, string title, Func<Task> action) => _commands.Register(new CommandDescriptor
-        { Id = id, Title = title, Category = "上下文 / MCP", Keywords = "ark-terminal-context Skill 上下文 错误 快照 解释 危险 修复 交接 MCP",
-            Shortcut = id == "ark-terminal-context" ? "Ctrl+Shift+F9（全局）" : "未绑定", ExecuteAsync = _ => action() });
+        { Id = id, Title = title, Category = Localize.T("Text0044"), Keywords = Localize.T("Text0045"),
+            Shortcut = id == "ark-terminal-context" ? Localize.T("Text0046") : Localize.T("Text0047"), ExecuteAsync = _ => action() });
         Task Open(int purpose) { OpenContext(purpose); return Task.CompletedTask; }
-        Add("ark-terminal-context", "上下文：预览 / 复制 / 跨 Agent 交接", () => Open(0));
-        Add("context.snapshot", "保存错误快照 Markdown（先预览）", () => Open(3));
-        Add("context.explain", "请求 CLI 解释命令与危险提醒", () => Open(1));
-        Add("context.repair", "请求 CLI 分析错误与修复建议", () => Open(2));
-        Add("context.review-command", "审阅 Agent 建议 / 确认执行命令", () => { OpenCommandReview(); return Task.CompletedTask; });
-        Add("mcp.manage", "只读 MCP：连接授权 / 撤销 / 复制配置", () => { ShowMcpAccess(); return Task.CompletedTask; });
+        Add("ark-terminal-context", Localize.T("Text0048"), () => Open(0));
+        Add("context.snapshot", Localize.T("Text0049"), () => Open(3));
+        Add("context.explain", Localize.T("Text0050"), () => Open(1));
+        Add("context.repair", Localize.T("Text0051"), () => Open(2));
+        Add("context.review-command", Localize.T("Text0052"), () => { OpenCommandReview(); return Task.CompletedTask; });
+        Add("mcp.manage", Localize.T("Text0053"), () => { ShowMcpAccess(); return Task.CompletedTask; });
         ShortcutList.ItemsSource = _commands.Search(string.Empty).Where(command => !command.Id.StartsWith("tab.activate.", StringComparison.Ordinal) && !command.Id.StartsWith("profile.launch.", StringComparison.Ordinal)).ToArray();
         _hotkey.ContextInvoked += () => Dispatcher.BeginInvoke(() => OpenContext(0));
         Closed += (_, _) => { _contextWindow?.Close(); _mcpWindow?.Close(); _commandReviewWindow?.Close(); };
@@ -76,8 +76,8 @@ public partial class MainWindow
         if (tab?.Session is not { } session || tab.Launch is null || _host.Sessions.GetSession(id) != session) return null;
         var shell = session.ShellStatus;
         var metadata = new ContextMetadata(id, tab.Launch.Request.ProfileId, tab.ProfileName, tab.Launch.Request.AgentRecipe is null ? "Shell" : "Agent",
-            shell.WorkingDirectory ?? tab.WorkingDirectory, shell.WorkingDirectory is null ? "启动快照；当前目录未验证" : "Shell 集成元数据（不可信）",
-            session.VerifiedLaunchProcessName ?? "未知", session.State.ToString());
+            shell.WorkingDirectory ?? tab.WorkingDirectory, shell.WorkingDirectory is null ? Localize.T("Text0054") : Localize.T("Text0055"),
+            session.VerifiedLaunchProcessName ?? Localize.T("Text0056"), session.State.ToString());
         return new TerminalContextSource(session, metadata, TerminalView.GetContextSelection(id));
     }, System.Windows.Threading.DispatcherPriority.Background, token).Task;
 
@@ -88,19 +88,19 @@ public partial class MainWindow
         Show(); Activate();
         if (_contextWindow is not null) { _contextWindow.Activate(); return; }
         var tab = _tabs.ActiveTab;
-        if (tab.Session is not { } session || tab.Launch is null) { StatusText.Text = "请先选择一个已有终端会话，再采集上下文。"; return; }
-        var targets = new List<ContextTarget> { new("剪贴板 / 手工选择 CLI") };
+        if (tab.Session is not { } session || tab.Launch is null) { StatusText.Text = Localize.T("Text0057"); return; }
+        var targets = new List<ContextTarget> { new(Localize.T("Text0058")) };
         targets.AddRange(_tabs.Tabs.Where(t => t.Launch?.Request.AgentRecipe is not null).Select(t => new ContextTarget(
-            $"Agent 标签：{ContextText.SafeField(t.ProfileName)} · {t.Session?.Id} · 启动 cwd：{ContextText.SafeField(t.WorkingDirectory, 4096)} · 输入模式未知", t.Launch!.Clone(), t.Session?.Id)));
+            Localize.F("Text0059", ContextText.SafeField(t.ProfileName), t.Session?.Id, ContextText.SafeField(t.WorkingDirectory, 4096)), t.Launch!.Clone(), t.Session?.Id)));
         targets.AddRange((_host.Catalog?.Profiles ?? []).Where(p => p.AgentRecipe is not null).Select(p => new ContextTarget(
-            "新辅助 Agent 配方：" + ContextText.SafeField(p.Name) + " · cwd：" + ContextText.SafeField(p.WorkingDirectory, 4096),
+            Localize.T("Text0060") + ContextText.SafeField(p.Name) + " · cwd：" + ContextText.SafeField(p.WorkingDirectory, 4096),
             TabLaunchConfiguration.FromProfile(p.DeepClone(), ExpandHome(p.WorkingDirectory), _host.FormalSettings?.Appearance))));
         _contextWindow = new(this, session.Id, _contexts, _snapshots, targets,
             () => !_closing && _tabs.Tabs.Any(t => t.Session == session && t.State != TabRuntimeState.Closing),
             async target =>
             {
-                if (target.ExistingSessionId is { } targetId && !_tabs.Tabs.Any(t => t.Session?.Id == targetId)) throw new InvalidOperationException("原目标会话已关闭，请重新选择目标。");
-                var auxiliary = await _tabs.LaunchAsync(target.AgentLaunch!.Clone(), "辅助 · " + target.AgentLaunch.ProfileName);
+                if (target.ExistingSessionId is { } targetId && !_tabs.Tabs.Any(t => t.Session?.Id == targetId)) throw new InvalidOperationException(Localize.T("Text0061"));
+                var auxiliary = await _tabs.LaunchAsync(target.AgentLaunch!.Clone(), Localize.T("Text0062") + target.AgentLaunch.ProfileName);
                 return auxiliary.Session?.State == SessionState.Running;
             }, RecordContextOperation, purpose);
         _contextWindow.Closed += (_, _) => _contextWindow = null;
@@ -124,21 +124,21 @@ public partial class MainWindow
     private async Task<string> ExecuteReviewedCommandAsync(TerminalProfile profile, string cwd, string command)
     {
         ContextText.ValidatePreview(command);
-        if (command.Length > ContextLimits.MaxCommandCharacters) throw new ArgumentException("命令超过 8192 字符。");
+        if (command.Length > ContextLimits.MaxCommandCharacters) throw new ArgumentException(Localize.T("Text0063"));
         profile.Arguments = ["-NoLogo", "-NoProfile", "-NoExit", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(command))];
         profile.PostLaunchInput = string.Empty;
         var launch = TabLaunchConfiguration.FromProfile(profile, ExpandHome(cwd), _host.FormalSettings?.Appearance);
         var resolved = await Task.Run(() => LaunchPathInspector.Resolve(launch.Request));
         launch = new TabLaunchConfiguration { Request = resolved, ProfileName = launch.ProfileName, Icon = launch.Icon, FontOptions = launch.FontOptions };
-        if (_closing) return "已取消，未创建会话。";
-        var detail = $"目标：新建 {profile.Name} 会话\n实际程序：{resolved.ExecutablePath}\n实际 cwd：{resolved.WorkingDirectory}\n权限：{(resolved.RunAsAdministrator ? "管理员；仍需 UAC" : "普通")}\n" +
-            "使用 -NoProfile -NoExit -EncodedCommand 执行下方完整命令。\n\n" + ContextDocument.RiskReminder(command) + "\n\n实际命令：\n" + command;
-        if (!AgentPickerControl.Review(this, "单独确认执行建议中的命令", detail, "在新会话执行此命令"))
-        { RecordContextOperation("cancelled"); return "已取消；未提交或执行命令。"; }
-        var tab = await _tabs.LaunchAsync(launch, "建议命令 · " + profile.Name);
-        if (tab.Session is null) return "会话未启动，命令未提交。";
+        if (_closing) return Localize.T("Text0064");
+        var detail = Localize.F("Text0065", profile.Name, resolved.ExecutablePath, resolved.WorkingDirectory, (resolved.RunAsAdministrator ? Localize.T("Text0833") : Localize.T("Text0834"))) +
+            Localize.T("Text0066") + ContextDocument.RiskReminder(command) + Localize.T("Text0067") + command;
+        if (!AgentPickerControl.Review(this, Localize.T("Text0068"), detail, Localize.T("Text0069")))
+        { RecordContextOperation("cancelled"); return Localize.T("Text0070"); }
+        var tab = await _tabs.LaunchAsync(launch, Localize.T("Text0071") + profile.Name);
+        if (tab.Session is null) return Localize.T("Text0072");
         _host.Diagnostics.Record(DiagnosticComponent.Context, DiagnosticEventKind.CommandSubmitted);
-        return "命令已作为新 Shell 的启动命令提交；执行结果请查看该终端，当前未确认成功。";
+        return Localize.T("Text0073");
     }
 
     private async Task<McpReadResponse> ReadMcpAsync(McpReadRequest request, McpReadGrant grant, CancellationToken token)
@@ -183,10 +183,10 @@ public partial class MainWindow
 
     private Task<string> CreateMcpConfigurationAsync() => Task.Run(() =>
     {
-        if (_host.Paths.Mode == Core.Data.AppDataMode.Msix) return "MSIX：尚无经过实际安装 / 清单验证的 stdio 启动入口，配置复制暂不可用。阶段 10 需在真实安装包中复验；不能把此限制当成 MSIX 验收通过。";
+        if (_host.Paths.Mode == Core.Data.AppDataMode.Msix) return Localize.T("Text0074");
         var executable = Path.Combine(AppContext.BaseDirectory, "Mcp", "ArkTerminal.Mcp.exe");
         if (!File.Exists(executable) || Environment.ProcessPath is not { } image || !Path.GetFileName(image).Equals("ArkTerminal.exe", StringComparison.OrdinalIgnoreCase))
-            return "当前没有可验证的 ArkTerminal.exe / Mcp/ArkTerminal.Mcp.exe 入口。请从完整构建或 ZIP 目录启动。";
+            return Localize.T("Text0075");
         using var process = Process.GetCurrentProcess();
         var entry = new { command = executable, args = new[] { "--pipe", _mcp.PipeName, "--instance", _mcp.InstanceId.ToString(), "--ui-pid", Environment.ProcessId.ToString(),
             "--ui-start", process.StartTime.ToUniversalTime().Ticks.ToString(), "--ui-image", image } };

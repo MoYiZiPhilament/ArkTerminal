@@ -30,15 +30,15 @@ public static class AgentPowerShell
         if (requested == AgentShellBackend.PowerShell7 && Find("pwsh.exe") is { } pwsh)
             return new(pwsh, AgentShellBackend.PowerShell7, false, "PowerShell 7（pwsh.exe）");
         var powershell = Find("powershell.exe") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
-        if (!File.Exists(powershell)) throw new FileNotFoundException("没有可用的 PowerShell 后端。请安装 PowerShell 或修正 PATH；不会循环重试启动。");
+        if (!File.Exists(powershell)) throw new FileNotFoundException(Localize.T("Text0474"));
         var fallback = requested == AgentShellBackend.PowerShell7;
-        return new(powershell, AgentShellBackend.WindowsPowerShell, fallback, fallback ? "Windows PowerShell 5（PATH 无 pwsh.exe，已回退）" : "Windows PowerShell 5（显式选择）");
+        return new(powershell, AgentShellBackend.WindowsPowerShell, fallback, fallback ? Localize.T("Text0475") : Localize.T("Text0476"));
     }
 
     public static IReadOnlyList<string> BuildShellArguments(string executable, IReadOnlyList<string> arguments)
     {
         if (!Path.IsPathFullyQualified(executable) || executable.Any(char.IsControl) || arguments.Any(value => value.Contains('\0')))
-            throw new ArgumentException("Agent 路径或参数无效。");
+            throw new ArgumentException(Localize.T("Text0477"));
         var extension = Path.GetExtension(executable).ToLowerInvariant();
         string script;
         if (extension == ".ps1")
@@ -62,11 +62,11 @@ public static class AgentPowerShell
                 // Batch files may reparse %*. Reject characters whose meaning depends on their contents.
                 // Semicolons, dollars, backticks, apostrophes, Unicode and spaces are literal inside these quotes.
                 if (arguments.Prepend(executable).Any(value => value.IndexOfAny(['%', '!', '^', '&', '|', '<', '>', '\r', '\n']) >= 0))
-                    throw new ArgumentException(".cmd 包装器不能安全传递 %、!、^、&、|、<、> 或换行。请选择原生 .exe / .ps1 入口，或移除这些字符。");
+                    throw new ArgumentException(Localize.T("Text0478"));
                 fileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "cmd.exe");
                 commandLine = "/d /v:off /s /c \"\"" + executable + "\" " + string.Join(" ", arguments.Select(value => WindowsCommandLine.QuoteArgument(value, forCmd: true))) + "\"";
             }
-            else throw new ArgumentException("Agent 仅支持 .exe、.cmd 和 .ps1。");
+            else throw new ArgumentException(Localize.T("Text0479"));
             var payload = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new { fileName, commandLine }));
             // ProcessStartInfo.Arguments uses Windows argv rules directly, including on Windows PowerShell 5.
             // It also leaves console descriptors inherited, so interactive I/O stays inside the same ConPTY.
@@ -75,7 +75,7 @@ public static class AgentPowerShell
                 "try { $p=[Diagnostics.Process]::Start($s); $p.WaitForExit(); $code=$p.ExitCode; $p.Dispose(); exit $code } catch { [Console]::Error.WriteLine('Agent process failed to start.'); exit 1 }";
         }
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
-        if (encoded.Length > 30000) throw new ArgumentException("编码后的启动内容超过 Windows 命令行上限，请缩短路径或参数。");
+        if (encoded.Length > 30000) throw new ArgumentException(Localize.T("Text0480"));
         return ["-NoLogo", "-NoProfile", "-EncodedCommand", encoded];
     }
 

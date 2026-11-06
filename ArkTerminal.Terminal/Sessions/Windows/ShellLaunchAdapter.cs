@@ -13,20 +13,20 @@ internal static class ShellLaunchAdapter
         if (request.RunAsAdministrator && Elevation.ElevationSupport.UnavailableReason is { } reason)
             throw new PlatformNotSupportedException(reason);
         if (request.AgentRecipe is not null)
-            throw new InvalidOperationException("Agent 配方必须先经 AgentLauncher 校验与解析，不能作为普通 Shell 启动。");
+            throw new InvalidOperationException(Localize.T("Text0537"));
         if (string.IsNullOrWhiteSpace(request.ExecutablePath))
         {
-            throw new ArgumentException("可执行文件不能为空。", nameof(request));
+            throw new ArgumentException(Localize.T("Text0538"), nameof(request));
         }
         if (request.ExecutablePath.Contains('\0') || request.WorkingDirectory.Contains('\0'))
         {
-            throw new ArgumentException("启动路径包含非法 NUL 字符。", nameof(request));
+            throw new ArgumentException(Localize.T("Text0539"), nameof(request));
         }
         foreach (var argument in request.Arguments)
         {
             if (argument.Contains('\0'))
             {
-                throw new ArgumentException("进程参数包含非法 NUL 字符。", nameof(request));
+                throw new ArgumentException(Localize.T("Text0540"), nameof(request));
             }
         }
     }
@@ -39,7 +39,7 @@ internal static class ShellLaunchAdapter
             var fullPath = Path.GetFullPath(expanded);
             if (!File.Exists(fullPath))
             {
-                throw new FileNotFoundException("找不到 Shell 可执行文件。", fullPath);
+                throw new FileNotFoundException(Localize.T("Text0541"), fullPath);
             }
             return fullPath;
         }
@@ -48,7 +48,7 @@ internal static class ShellLaunchAdapter
         var length = NativeMethods.SearchPathW(null, expanded, null, (uint)buffer.Capacity, buffer, IntPtr.Zero);
         if (length == 0 || length >= buffer.Capacity)
         {
-            throw new FileNotFoundException($"找不到 Shell 可执行文件：{expanded}", expanded);
+            throw new FileNotFoundException(Localize.F("Text0542", expanded), expanded);
         }
         return buffer.ToString();
     }
@@ -59,7 +59,7 @@ internal static class ShellLaunchAdapter
         var fullPath = Path.GetFullPath(expanded);
         if (!Directory.Exists(fullPath))
         {
-            throw new DirectoryNotFoundException($"启动目录不存在：{fullPath}");
+            throw new DirectoryNotFoundException(Localize.F("Text0543", fullPath));
         }
         return fullPath;
     }
@@ -87,7 +87,7 @@ internal static class ShellLaunchAdapter
         {
             if (string.IsNullOrEmpty(name) || name.Contains('=') || name.Contains('\0') || value.Contains('\0'))
             {
-                throw new ArgumentException("环境变量名或值无效。", nameof(overrides));
+                throw new ArgumentException(Localize.T("Text0544"), nameof(overrides));
             }
             environment[name] = value;
         }

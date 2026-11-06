@@ -1,10 +1,22 @@
 # ArkTerminal 项目进度
 
-更新日期：2026-11-04（Asia/Shanghai）。本表依据当前源码、`docs/IMPLEMENTATION-HISTORY.md` 的历史验收记录及本次仓库检查整理。
+更新日期：2026-11-06（Asia/Shanghai）。本表依据当前源码、`docs/IMPLEMENTATION-HISTORY.md` 的历史验收记录及本次仓库检查整理。
 
-**当前结论：阶段 1–9 已有实现；阶段 10 已实施本机修复、测量和双格式预览打包，最终发行验收未通过。** 当前主要版本为 `0.1.2a`。MSIX 安装 / 包身份下 MCP 与 UAC、干净 Windows 环境、物理输入和长期资源验收仍阻塞完整交付。
+**当前结论：阶段 1–9 已有实现；阶段 10 已实施本机修复、测量和预览打包，最终发行验收未通过。** 当前主要版本为 `1.2.2a`。MSIX 安装 / 包身份下 MCP 与 UAC、干净 Windows 环境、物理输入和长期资源验收仍阻塞完整交付。
 
-## 0.1.2a UI 与文档整理
+## 1.2.2a 本地化与英文文档
+
+- 新增统一 `ILocalizationService` 与中英文 `.resx` 资源目录，界面、动态控件及 Core / Terminal 用户可见错误均使用稳定资源键；英语为回退语言。
+- schema 1 新增可选 `regional.language` 与 `regional.timeZoneId`。首次创建配置时选择系统 UI 语言（中文为 `zh-CN`，其他为 `en-US`）及 Windows 本地时区；旧配置缺字段时使用相同默认值，不自动改写原文档。
+- 设置草稿支持语言和时区；保存后刷新现有窗口和动态控件。用户可见时间使用配置时区，记录、恢复与诊断继续使用 UTC。
+- 根 `README.md` 改为英文并居中图标，中文全文移至 `README.zh-CN.md`，两种语言互相链接。
+- 显示版本 `1.2.2a`，NuGet 构建版本 `1.2.2-a`，数字版本 / MSI `1.2.2`，MSIX 清单 `1.2.2.0`。
+- 最终 Debug / Release 锁定构建均为 0 警告 / 0 错误。仓库外生产程序集探针 14 项通过：系统默认值、旧 schema 1 缺字段兼容、双语 857 条资源、动态翻译、时区 / 夏令时转换及无效值拒绝。
+- 实际 Release 便携实例验证中文首次启动、英文保存即时刷新、英文命令面板 / Agent 控件 / 命令审阅 / MCP 窗口，以及重启后保留英文。正式 ZIP 首次配置为 `zh-CN` / `China Standard Time`，新建页子进程 0，CLR / WPF 原生模块来自包内，正常退出无异常标记。
+- 既有脚本生成自包含 ZIP、开发签名 MSIX 与 MSI；包内中英文资源、MCP、版本和空便携数据目录检查通过，3 个附件的 SHA-256 清单核对通过，MSI 既有 ICE 校验通过。未安装 MSIX / MSI，既有发行验收缺口不变。
+- 本轮临时界面与探针证据位于 Kimi 会话 `session_b2e84a6c-c19e-4ecf-868d-12c1dbc48e88` 及 `C:\Users\1\AppData\Local\Temp\ark-i18n-probe`、`ark-i18n-ui-fixed-S4EKaX`、`ark-1.2.2a-package-rfoBlu`；这些不是仓库测试工程或最终平台验收。
+
+## 0.1.2a UI 与文档整理（历史）
 
 版本约定：数字部分为 `x.x.x`，`a` 为主要版本、`b` 为测试版本（替代原 `preview`）、`c` 为特殊处理版本。历史发布名称保持原样；仅 MSIX 系统清单按 Windows 要求使用四段数字。
 

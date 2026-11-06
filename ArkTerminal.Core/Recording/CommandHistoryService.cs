@@ -19,7 +19,7 @@ public sealed class CommandHistoryService : IAsyncDisposable
     private HistoryPolicy _policy = new();
     private long _consent;
     private bool _enabled;
-    private string _status = "应用历史已关闭；只使用 Shell 自身历史。";
+    private string _status = Localize.T("Text0663");
 
     public CommandHistoryService(IAppDataPaths paths)
     {
@@ -38,7 +38,7 @@ public sealed class CommandHistoryService : IAsyncDisposable
             _enabled = enabled;
             _policy = policy.DeepClone();
             _consent++;
-            _status = enabled ? "正在记录本次运行中有可靠开始与结束事件的命令；重启后默认关闭。" : "应用历史已关闭。";
+            _status = enabled ? Localize.T("Text0664") : Localize.T("Text0665");
         }
         // Barrier: after stopping returns, no previous consent can still write.
         await _files.WaitAsync().ConfigureAwait(false);
@@ -52,7 +52,7 @@ public sealed class CommandHistoryService : IAsyncDisposable
         {
             if (!_enabled || consent != _consent || string.IsNullOrWhiteSpace(entry.Command) || entry.Command.Length > RecordingLimits.MaxCommandCharacters) return;
             if (_queue.Writer.TryWrite((consent, entry))) return;
-            _enabled = false; _consent++; _status = "历史队列已满，已停止记录；终端继续运行。";
+            _enabled = false; _consent++; _status = Localize.T("Text0666");
         }
         Changed?.Invoke();
     }
@@ -84,10 +84,10 @@ public sealed class CommandHistoryService : IAsyncDisposable
         RecordingFiles.CheckDirectory(Path.GetDirectoryName(_path)!);
         RecordingFiles.CheckFile(_path);
         if (!File.Exists(_path)) return [];
-        if (new FileInfo(_path).Length > RecordingLimits.MaxReadHistoryBytes) throw new IOException("历史文件超出读取上限。");
-        var document = JsonSerializer.Deserialize<HistoryDocument>(File.ReadAllBytes(_path)) ?? throw new IOException("历史文件无效。");
-        if (document.SchemaVersion != 1) throw new IOException("历史版本不受支持，未覆盖原文件。");
-        if (document.Entries is null) throw new IOException("历史条目无效。");
+        if (new FileInfo(_path).Length > RecordingLimits.MaxReadHistoryBytes) throw new IOException(Localize.T("Text0667"));
+        var document = JsonSerializer.Deserialize<HistoryDocument>(File.ReadAllBytes(_path)) ?? throw new IOException(Localize.T("Text0668"));
+        if (document.SchemaVersion != 1) throw new IOException(Localize.T("Text0669"));
+        if (document.Entries is null) throw new IOException(Localize.T("Text0670"));
         return document.Entries.Where(item => item is not null && item.Command is { Length: <= RecordingLimits.MaxCommandCharacters }).ToList();
     }
 
@@ -116,7 +116,7 @@ public sealed class CommandHistoryService : IAsyncDisposable
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
             {
-                lock (_sync) { _enabled = false; _consent++; _status = "历史写入失败，已停止记录；终端继续运行。"; }
+                lock (_sync) { _enabled = false; _consent++; _status = Localize.T("Text0671"); }
                 Changed?.Invoke();
             }
             finally

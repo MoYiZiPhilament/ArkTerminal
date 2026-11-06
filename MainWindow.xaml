@@ -5,7 +5,8 @@
         xmlns:rendering="clr-namespace:ArkTerminal.Rendering"
         xmlns:controls="clr-namespace:ArkTerminal.Controls"
         xmlns:visuals="clr-namespace:ArkTerminal.Visuals"
-        Title="ArkTerminal · 新建" Icon="Assets/AppIcon.ico" Width="1180" Height="800" MinWidth="720" MinHeight="520"
+        xmlns:loc="clr-namespace:ArkTerminal.Localization"
+        Title="{loc:Text Text0706}" Icon="Assets/AppIcon.ico" Width="1180" Height="800" MinWidth="720" MinHeight="520"
         WindowStyle="None" ResizeMode="CanResize" UseLayoutRounding="True"
         Background="{DynamicResource Theme.WindowBackground}"
         Closing="Window_Closing" SourceInitialized="Window_SourceInitialized" PreviewKeyDown="Window_PreviewKeyDown">
@@ -27,35 +28,35 @@
 
             <Grid x:Name="TitleBar" Grid.Row="0" Grid.ColumnSpan="3" Background="{DynamicResource Theme.SurfaceBackground}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Button x:Name="AppMenuButton" Content="&#xE700;" Style="{StaticResource IconButton}" Click="AppMenu_Click" ToolTip="应用菜单" AutomationProperties.Name="应用菜单" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button x:Name="AppMenuButton" Content="&#xE700;" Style="{StaticResource IconButton}" Click="AppMenu_Click" ToolTip="{loc:Text Text0041}" AutomationProperties.Name="{loc:Text Text0041}" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button.ContextMenu>
                         <ContextMenu Placement="Bottom" HorizontalOffset="0" VerticalOffset="8">
-                            <MenuItem Header="新建会话" InputGestureText="Ctrl+Shift+T" Click="NewPage_Click"/>
-                            <MenuItem Header="命令面板" Click="ShowCommandPalette_Click"/>
-                            <MenuItem Header="上下文预览 / Agent 交接" InputGestureText="Ctrl+Shift+F9" Click="OpenContext_Click"/>
-                            <MenuItem Header="保存错误快照…" Click="OpenSnapshot_Click"/>
-                            <MenuItem Header="审阅建议 / 确认执行命令" Click="OpenCommandReview_Click"/>
-                            <MenuItem Header="只读 MCP：授权 / 撤销 / 配置" Click="McpAccess_Click"/>
+                            <MenuItem Header="{loc:Text Text0707}" InputGestureText="Ctrl+Shift+T" Click="NewPage_Click"/>
+                            <MenuItem Header="{loc:Text Text0080}" Click="ShowCommandPalette_Click"/>
+                            <MenuItem Header="{loc:Text Text0708}" InputGestureText="Ctrl+Shift+F9" Click="OpenContext_Click"/>
+                            <MenuItem Header="{loc:Text Text0709}" Click="OpenSnapshot_Click"/>
+                            <MenuItem Header="{loc:Text Text0295}" Click="OpenCommandReview_Click"/>
+                            <MenuItem Header="{loc:Text Text0710}" Click="McpAccess_Click"/>
                             <Separator/>
-                            <MenuItem Header="设置" Click="Settings_Click"/>
-                            <MenuItem Header="专注模式" Click="FocusMode_Click"/>
-                            <MenuItem Header="性能模式" Click="PerformanceMode_Click"/>
+                            <MenuItem Header="{loc:Text Text0039}" Click="Settings_Click"/>
+                            <MenuItem Header="{loc:Text Text0711}" Click="FocusMode_Click"/>
+                            <MenuItem Header="{loc:Text Text0240}" Click="PerformanceMode_Click"/>
                             <Separator/>
-                            <MenuItem Header="关闭窗口" InputGestureText="Alt+F4" Click="CloseWindow_Click" Foreground="{DynamicResource Theme.ErrorBorder}"/>
+                            <MenuItem Header="{loc:Text Text0712}" InputGestureText="Alt+F4" Click="CloseWindow_Click" Foreground="{DynamicResource Theme.ErrorBorder}"/>
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
                 <TextBlock x:Name="CaptionTitle" Grid.Column="1" Text="ArkTerminal" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Theme.SecondaryText}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <StackPanel x:Name="NavigationPanel" Orientation="Horizontal" Margin="0,0,8,0">
-                        <Button x:Name="CommandPaletteButton" Content="&#xE721;" Style="{StaticResource IconButton}" Click="ShowCommandPalette_Click" ToolTip="命令面板" AutomationProperties.Name="命令面板"/>
-                        <Button Content="&#xE713;" Style="{StaticResource IconButton}" Click="Settings_Click" ToolTip="设置" AutomationProperties.Name="设置"/>
-                        <Button Content="&#xE740;" Style="{StaticResource IconButton}" Click="FocusMode_Click" ToolTip="专注模式" AutomationProperties.Name="专注模式"/>
-                        <Button x:Name="PerformanceModeButton" Content="&#xE945;" Style="{StaticResource IconButton}" Click="PerformanceMode_Click" ToolTip="性能模式" AutomationProperties.Name="性能模式"/>
+                        <Button x:Name="CommandPaletteButton" Content="&#xE721;" Style="{StaticResource IconButton}" Click="ShowCommandPalette_Click" ToolTip="{loc:Text Text0080}" AutomationProperties.Name="{loc:Text Text0080}"/>
+                        <Button Content="&#xE713;" Style="{StaticResource IconButton}" Click="Settings_Click" ToolTip="{loc:Text Text0039}" AutomationProperties.Name="{loc:Text Text0039}"/>
+                        <Button Content="&#xE740;" Style="{StaticResource IconButton}" Click="FocusMode_Click" ToolTip="{loc:Text Text0711}" AutomationProperties.Name="{loc:Text Text0711}"/>
+                        <Button x:Name="PerformanceModeButton" Content="&#xE945;" Style="{StaticResource IconButton}" Click="PerformanceMode_Click" ToolTip="{loc:Text Text0240}" AutomationProperties.Name="{loc:Text Text0240}"/>
                     </StackPanel>
-                    <Button Content="&#xE921;" Style="{StaticResource CaptionButton}" Click="MinimizeWindow_Click" ToolTip="最小化" AutomationProperties.Name="最小化"/>
-                    <Button x:Name="MaximizeWindowButton" Content="&#xE922;" Style="{StaticResource CaptionButton}" Click="MaximizeWindow_Click" ToolTip="最大化" AutomationProperties.Name="最大化"/>
-                    <Button Content="&#xE8BB;" Tag="CloseWindow" Style="{StaticResource CaptionButton}" Click="CloseWindow_Click" ToolTip="关闭" AutomationProperties.Name="关闭"/>
+                    <Button Content="&#xE921;" Style="{StaticResource CaptionButton}" Click="MinimizeWindow_Click" ToolTip="{loc:Text Text0713}" AutomationProperties.Name="{loc:Text Text0713}"/>
+                    <Button x:Name="MaximizeWindowButton" Content="&#xE922;" Style="{StaticResource CaptionButton}" Click="MaximizeWindow_Click" ToolTip="{loc:Text Text0038}" AutomationProperties.Name="{loc:Text Text0038}"/>
+                    <Button Content="&#xE8BB;" Tag="CloseWindow" Style="{StaticResource CaptionButton}" Click="CloseWindow_Click" ToolTip="{loc:Text Text0213}" AutomationProperties.Name="{loc:Text Text0213}"/>
                 </StackPanel>
             </Grid>
 
@@ -64,8 +65,8 @@
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <Border x:Name="TabRailBackground" Grid.RowSpan="2" Grid.ColumnSpan="4" CornerRadius="12" Background="Transparent" IsHitTestVisible="False"/>
                 <StackPanel x:Name="TabNavigationButtons" shell:WindowChrome.IsHitTestVisibleInChrome="True" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="&#xE76B;" Style="{StaticResource IconButton}" Width="24" Click="PreviousTab_Click" ToolTip="上一个标签" AutomationProperties.Name="上一个标签"/>
-                    <Button Content="&#xE76C;" Style="{StaticResource IconButton}" Width="24" Click="NextTab_Click" ToolTip="下一个标签" AutomationProperties.Name="下一个标签"/>
+                    <Button Content="&#xE76B;" Style="{StaticResource IconButton}" Width="24" Click="PreviousTab_Click" ToolTip="{loc:Text Text0087}" AutomationProperties.Name="{loc:Text Text0087}"/>
+                    <Button Content="&#xE76C;" Style="{StaticResource IconButton}" Width="24" Click="NextTab_Click" ToolTip="{loc:Text Text0086}" AutomationProperties.Name="{loc:Text Text0086}"/>
                 </StackPanel>
                 <ScrollViewer x:Name="TabScrollViewer" Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
                     <controls:TerminalTabStrip x:Name="TabStrip" OrientationEx="Horizontal">
@@ -74,13 +75,13 @@
                             <Border x:Name="TabBorder" shell:WindowChrome.IsHitTestVisibleInChrome="True" Padding="10,0" MinHeight="36" Margin="2,1" BorderBrush="Transparent" BorderThickness="1" CornerRadius="9"
                                     Background="Transparent" MouseLeftButtonDown="Tab_MouseLeftButtonDown" ToolTip="{Binding ToolTipText}">
                                 <Border.ContextMenu><ContextMenu>
-                                    <MenuItem Header="重命名 / 清除固定名称" Click="RenameTab_Click"/>
-                                    <MenuItem Header="重复标签" Click="DuplicateTab_Click"/>
-                                    <MenuItem Header="重启会话" Click="RestartTab_Click"/>
-                                    <Separator/><MenuItem Header="关闭标签" Click="CloseTab_Click"/>
+                                    <MenuItem Header="{loc:Text Text0714}" Click="RenameTab_Click"/>
+                                    <MenuItem Header="{loc:Text Text0715}" Click="DuplicateTab_Click"/>
+                                    <MenuItem Header="{loc:Text Text0716}" Click="RestartTab_Click"/>
+                                    <Separator/><MenuItem Header="{loc:Text Text0088}" Click="CloseTab_Click"/>
                                 </ContextMenu></Border.ContextMenu>
                                 <DockPanel>
-                                    <Button x:Name="TabClose" DockPanel.Dock="Right" Content="&#xE8BB;" Style="{StaticResource IconButton}" FontSize="9" Width="22" Height="26" MinHeight="26" Margin="4,0,0,0" Click="CloseTab_Click" ToolTip="关闭标签" AutomationProperties.Name="关闭标签"/>
+                                    <Button x:Name="TabClose" DockPanel.Dock="Right" Content="&#xE8BB;" Style="{StaticResource IconButton}" FontSize="9" Width="22" Height="26" MinHeight="26" Margin="4,0,0,0" Click="CloseTab_Click" ToolTip="{loc:Text Text0088}" AutomationProperties.Name="{loc:Text Text0088}"/>
                                     <TextBlock x:Name="TabIcon" DockPanel.Dock="Left" Text="{Binding Icon}" Width="22" Margin="0,0,6,0" VerticalAlignment="Center" TextWrapping="NoWrap"/>
                                     <TextBlock x:Name="TabLabel" Text="{Binding Title}" Foreground="{DynamicResource Theme.SecondaryText}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" VerticalAlignment="Center"/>
                                 </DockPanel>
@@ -94,7 +95,7 @@
                         </DataTemplate></controls:TerminalTabStrip.ItemTemplate>
                     </controls:TerminalTabStrip>
                 </ScrollViewer>
-                <Button x:Name="NewTabButton" shell:WindowChrome.IsHitTestVisibleInChrome="True" Grid.Column="2" Content="&#xE710;" Style="{StaticResource IconButton}" Click="NewPage_Click" ToolTip="新建会话" AutomationProperties.Name="新建会话"/>
+                <Button x:Name="NewTabButton" shell:WindowChrome.IsHitTestVisibleInChrome="True" Grid.Column="2" Content="&#xE710;" Style="{StaticResource IconButton}" Click="NewPage_Click" ToolTip="{loc:Text Text0707}" AutomationProperties.Name="{loc:Text Text0707}"/>
                 <TextBlock x:Name="TabCountText" Grid.Column="3" Visibility="Collapsed" VerticalAlignment="Center" Margin="4,0"/>
             </Grid>
             <GridSplitter x:Name="LeftTabSplitter" Grid.Row="2" Grid.Column="1" Width="5" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Background="Transparent" Cursor="SizeWE"/>
@@ -106,27 +107,27 @@
                             <Border Width="48" Height="48" CornerRadius="14" Background="{DynamicResource Theme.ActiveTabBackground}" Margin="0,0,16,0">
                                 <TextBlock Text="&gt;_" FontFamily="Cascadia Mono, Consolas" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource Theme.AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="新建会话" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Text Text0707}" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                         <Border x:Name="ErrorPanel" Padding="18" CornerRadius="12" Margin="0,0,0,16" Background="{DynamicResource Theme.ErrorBackground}" BorderBrush="{DynamicResource Theme.ErrorBorder}" BorderThickness="1">
-                            <StackPanel><TextBlock Text="需要处理的问题" FontWeight="SemiBold"/><TextBlock x:Name="ErrorText" TextWrapping="Wrap" Margin="0,8"/><Button Content="备份后恢复无效文档默认值" Click="ResetButton_Click" HorizontalAlignment="Left"/></StackPanel>
+                            <StackPanel><TextBlock Text="{loc:Text Text0717}" FontWeight="SemiBold"/><TextBlock x:Name="ErrorText" TextWrapping="Wrap" Margin="0,8"/><Button Content="{loc:Text Text0718}" Click="ResetButton_Click" HorizontalAlignment="Left"/></StackPanel>
                         </Border>
                         <Border x:Name="RecoveryPanel" Padding="18" CornerRadius="12" Margin="0,0,0,16" Background="{DynamicResource Theme.RecoveryBackground}" BorderBrush="{DynamicResource Theme.RecoveryBorder}" BorderThickness="1">
-                            <StackPanel><TextBlock Text="恢复上次工作" FontWeight="SemiBold"/><TextBlock Text="可恢复草稿和标签布局。会话等待你确认启动。" Margin="0,8"/><WrapPanel><Button Content="恢复" Click="RecoverButton_Click"/><Button Content="丢弃恢复数据" Click="DiscardRecoveryButton_Click"/></WrapPanel></StackPanel>
+                            <StackPanel><TextBlock Text="{loc:Text Text0719}" FontWeight="SemiBold"/><TextBlock Text="{loc:Text Text0720}" Margin="0,8"/><WrapPanel><Button Content="{loc:Text Text0721}" Click="RecoverButton_Click"/><Button Content="{loc:Text Text0722}" Click="DiscardRecoveryButton_Click"/></WrapPanel></StackPanel>
                         </Border>
                         <Border Padding="20" CornerRadius="12" Margin="0,0,0,20" Background="{DynamicResource Theme.CardBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="工作目录" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,14"/>
+                                <TextBlock Text="{loc:Text Text0723}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,14"/>
                                 <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <TextBox x:Name="DirectoryInput" TextChanged="DirectoryInput_TextChanged" AutomationProperties.Name="工作目录" VerticalContentAlignment="Center" Margin="0,0,8,0"/>
-                                    <Button Grid.Column="1" Content="浏览…" Click="BrowseDirectory_Click" Margin="0"/>
+                                    <TextBox x:Name="DirectoryInput" TextChanged="DirectoryInput_TextChanged" AutomationProperties.Name="{loc:Text Text0723}" VerticalContentAlignment="Center" Margin="0,0,8,0"/>
+                                    <Button Grid.Column="1" Content="{loc:Text Text0724}" Click="BrowseDirectory_Click" Margin="0"/>
                                 </Grid>
-                                <WrapPanel><Button Content="使用 Profile 目录" Click="UseProfileDirectory_Click"/><Button Content="识别项目" Click="DetectProject_Click"/><Button Content="取消识别" Click="CancelDetect_Click"/></WrapPanel>
+                                <WrapPanel><Button Content="{loc:Text Text0725}" Click="UseProfileDirectory_Click"/><Button Content="{loc:Text Text0726}" Click="DetectProject_Click"/><Button Content="{loc:Text Text0727}" Click="CancelDetect_Click"/></WrapPanel>
                                 <TextBlock x:Name="DetectionStatus" Foreground="{DynamicResource Theme.SecondaryText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                                 <ItemsControl x:Name="DetectionResults" Margin="0,4,0,0"><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayText}" Tag="{Binding Path}" Click="ProjectCandidate_Click" HorizontalContentAlignment="Left" Margin="0,0,0,4"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="Shell 与 Profile" FontSize="16" FontWeight="SemiBold" Margin="2,0,0,12"/>
+                        <TextBlock Text="{loc:Text Text0728}" FontSize="16" FontWeight="SemiBold" Margin="2,0,0,12"/>
                         <ItemsControl x:Name="ProfilesList"><ItemsControl.ItemTemplate><DataTemplate>
                             <Button AutomationProperties.Name="{Binding Name}" Tag="{Binding}" Click="ProfileLaunch_Click" HorizontalContentAlignment="Stretch" Margin="0,0,0,8" Padding="16,14">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -142,10 +143,10 @@
                         </Border>
                         <Border Padding="20" CornerRadius="12" Margin="0,16,0,16" Background="{DynamicResource Theme.CardBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <DockPanel><Button DockPanel.Dock="Right" Content="清空" Click="ClearRecents_Click" Margin="0"/><TextBlock Text="最近项目" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
-                                <TextBlock x:Name="RecentsEmpty" Text="暂无最近项目" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,12,0,0"/>
+                                <DockPanel><Button DockPanel.Dock="Right" Content="{loc:Text Text0729}" Click="ClearRecents_Click" Margin="0"/><TextBlock Text="{loc:Text Text0730}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
+                                <TextBlock x:Name="RecentsEmpty" Text="{loc:Text Text0731}" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,12,0,0"/>
                                 <ItemsControl x:Name="RecentsList"><ItemsControl.ItemTemplate><DataTemplate>
-                                    <DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Right" Content="&#xE8BB;" Style="{StaticResource IconButton}" Tag="{Binding Path}" Click="RemoveRecent_Click" ToolTip="移除最近项目" AutomationProperties.Name="移除最近项目"/><Button Content="{Binding DisplayName}" Tag="{Binding Path}" Click="RecentProject_Click" ToolTip="{Binding Path}" HorizontalContentAlignment="Left"/></DockPanel>
+                                    <DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Right" Content="&#xE8BB;" Style="{StaticResource IconButton}" Tag="{Binding Path}" Click="RemoveRecent_Click" ToolTip="{loc:Text Text0732}" AutomationProperties.Name="{loc:Text Text0732}"/><Button Content="{Binding DisplayName}" Tag="{Binding Path}" Click="RecentProject_Click" ToolTip="{Binding Path}" HorizontalContentAlignment="Left"/></DockPanel>
                                 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                             </StackPanel>
                         </Border>
@@ -195,99 +196,101 @@
     </Style>
 </Grid.Resources>
 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-<TextBlock x:Name="SettingsSectionTitle" Text="外观" FontSize="28" FontWeight="SemiBold" Margin="4,0,0,20"/>
+<TextBlock x:Name="SettingsSectionTitle" Text="{loc:Text Text0733}" FontSize="28" FontWeight="SemiBold" Margin="4,0,0,20"/>
 <TabControl x:Name="SettingsCategories" Grid.Row="1" TabStripPlacement="Left" SelectionChanged="SettingsCategory_Changed">
-<TabItem Header="外观" Tag="&#xE790;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}" Margin="0,0,0,16"><StackPanel><TextBlock Text="字体与排版" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/><StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="UI 字体" Width="180" VerticalAlignment="Center"/><TextBox x:Name="UiFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="UI 字号（6—96）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="终端字体" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="终端字号（6—96）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalFontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="终端字重（100—1000）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalWeightInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="行高倍数（0.75—3）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalLineHeightInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="字距 DIP（-4—16）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalSpacingInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="强调色 #RRGGBB" Width="180" VerticalAlignment="Center"/><TextBox x:Name="AccentInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<CheckBox x:Name="LigaturesInput" Content="启用终端连字" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<CheckBox x:Name="TimestampsInput" Content="显示首次收到输出的时间戳" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<CheckBox x:Name="LineNumbersInput" Content="显示逻辑行号" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<CheckBox x:Name="DurationInput" Content="显示命令耗时" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<TabItem Header="{loc:Text Text0733}" Tag="&#xE790;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}" Margin="0,0,0,16"><StackPanel><TextBlock Text="{loc:Text Text0734}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/><StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0735}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="UiFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0736}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0737}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0738}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalFontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0739}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalWeightInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0740}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalLineHeightInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0741}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalSpacingInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0742}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="AccentInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<CheckBox x:Name="LigaturesInput" Content="{loc:Text Text0743}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<CheckBox x:Name="TimestampsInput" Content="{loc:Text Text0744}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<CheckBox x:Name="LineNumbersInput" Content="{loc:Text Text0745}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<CheckBox x:Name="DurationInput" Content="{loc:Text Text0746}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
 <TextBlock x:Name="FontPreviewSource" Margin="0,4,0,4"/>
 <controls:RoundedBorder CornerRadius="10" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" Margin="0,0,0,12"><rendering:DirectWriteTerminalControl x:Name="FontPreview" Height="140" IsHitTestVisible="False"/></controls:RoundedBorder>
 </StackPanel></Border><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}">                        <StackPanel x:Name="VisualSettingsControls" Margin="0,0,0,12">
-                            <TextBlock Text="窗口与背景" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="{loc:Text Text0747}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <TextBlock x:Name="VisualCapabilityText" Foreground="{DynamicResource Theme.SecondaryText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="主题" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="ThemeInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="跟随系统" Tag="System"/><ComboBoxItem Content="浅色" Tag="Light"/><ComboBoxItem Content="深色" Tag="Dark"/></ComboBox></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="窗口材质" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="MaterialInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="自动（按能力）" Tag="Auto"/><ComboBoxItem Content="关闭" Tag="Off"/><ComboBoxItem Content="Mica" Tag="Mica"/><ComboBoxItem Content="Acrylic" Tag="Acrylic"/></ComboBox></StackPanel>
-                            <CheckBox x:Name="DesktopBackgroundInput" Content="关闭应用背景并透出真实桌面后景" Checked="VisualInput_Changed" Unchecked="VisualInput_Changed" Margin="0,0,0,8"/>
-                            <CheckBox x:Name="AuroraEnabledInput" Content="启用活动极光" Checked="VisualInput_Changed" Unchecked="VisualInput_Changed" Margin="0,0,0,8"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="极光预设" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="AuroraPresetInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="borealis · 青紫" Tag="borealis"/><ComboBoxItem Content="dawn · 晨曦" Tag="dawn"/><ComboBoxItem Content="ocean · 深海" Tag="ocean"/><ComboBoxItem Content="ember · 余烬" Tag="ember"/><ComboBoxItem Content="自定义" Tag="custom"/></ComboBox></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="自定义色（3—6 个）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="AuroraColorsInput" Width="360" TextChanged="VisualInput_Changed"/></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8"><Button Content="导入背景图" Click="ImportBackground_Click"/><Button Content="清除背景图" Click="ClearBackground_Click"/><TextBlock x:Name="BackgroundPathText" VerticalAlignment="Center" Foreground="{DynamicResource Theme.SecondaryText}"/></StackPanel>
-                            <TextBlock Text="模糊、亮度与饱和度仅用于应用内背景图。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,0,0,8"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景遮罩" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundOverlayInput" Width="260" Minimum="0" Maximum="0.85" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景模糊（DIP）" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundBlurInput" Width="260" Minimum="0" Maximum="24" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景亮度" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundBrightnessInput" Width="260" Minimum="0.5" Maximum="1.5" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="背景饱和度" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundSaturationInput" Width="260" Minimum="0" Maximum="2" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="背景适配" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="BackgroundFitInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="完整适应" Tag="Uniform"/><ComboBoxItem Content="裁剪填满" Tag="UniformToFill"/><ComboBoxItem Content="拉伸填满" Tag="Fill"/><ComboBoxItem Content="原始大小" Tag="None"/></ComboBox></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="背景位置" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="BackgroundPositionInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="左上" Tag="TopLeft"/><ComboBoxItem Content="顶部" Tag="Top"/><ComboBoxItem Content="右上" Tag="TopRight"/><ComboBoxItem Content="左侧" Tag="Left"/><ComboBoxItem Content="居中" Tag="Center"/><ComboBoxItem Content="右侧" Tag="Right"/><ComboBoxItem Content="左下" Tag="BottomLeft"/><ComboBoxItem Content="底部" Tag="Bottom"/><ComboBoxItem Content="右下" Tag="BottomRight"/></ComboBox></StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="终端背景不透明度" Width="180" VerticalAlignment="Center"/><Slider x:Name="TerminalOpacityInput" Width="260" Minimum="0.35" Maximum="1" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0748}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="ThemeInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="{loc:Text Text0749}" Tag="System"/><ComboBoxItem Content="{loc:Text Text0750}" Tag="Light"/><ComboBoxItem Content="{loc:Text Text0751}" Tag="Dark"/></ComboBox></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0752}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="MaterialInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="{loc:Text Text0753}" Tag="Auto"/><ComboBoxItem Content="{loc:Text Text0213}" Tag="Off"/><ComboBoxItem Content="Mica" Tag="Mica"/><ComboBoxItem Content="Acrylic" Tag="Acrylic"/></ComboBox></StackPanel>
+                            <CheckBox x:Name="DesktopBackgroundInput" Content="{loc:Text Text0754}" Checked="VisualInput_Changed" Unchecked="VisualInput_Changed" Margin="0,0,0,8"/>
+                            <CheckBox x:Name="AuroraEnabledInput" Content="{loc:Text Text0755}" Checked="VisualInput_Changed" Unchecked="VisualInput_Changed" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0756}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="AuroraPresetInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="{loc:Text Text0422}" Tag="borealis"/><ComboBoxItem Content="{loc:Text Text0423}" Tag="dawn"/><ComboBoxItem Content="{loc:Text Text0424}" Tag="ocean"/><ComboBoxItem Content="{loc:Text Text0425}" Tag="ember"/><ComboBoxItem Content="{loc:Text Text0757}" Tag="custom"/></ComboBox></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0758}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="AuroraColorsInput" Width="360" TextChanged="VisualInput_Changed"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8"><Button Content="{loc:Text Text0759}" Click="ImportBackground_Click"/><Button Content="{loc:Text Text0760}" Click="ClearBackground_Click"/><TextBlock x:Name="BackgroundPathText" VerticalAlignment="Center" Foreground="{DynamicResource Theme.SecondaryText}"/></StackPanel>
+                            <TextBlock Text="{loc:Text Text0761}" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="{loc:Text Text0762}" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundOverlayInput" Width="260" Minimum="0" Maximum="0.85" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="{loc:Text Text0763}" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundBlurInput" Width="260" Minimum="0" Maximum="24" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="{loc:Text Text0764}" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundBrightnessInput" Width="260" Minimum="0.5" Maximum="1.5" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="{loc:Text Text0765}" Width="180" VerticalAlignment="Center"/><Slider x:Name="BackgroundSaturationInput" Width="260" Minimum="0" Maximum="2" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0766}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="BackgroundFitInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="{loc:Text Text0767}" Tag="Uniform"/><ComboBoxItem Content="{loc:Text Text0768}" Tag="UniformToFill"/><ComboBoxItem Content="{loc:Text Text0769}" Tag="Fill"/><ComboBoxItem Content="{loc:Text Text0770}" Tag="None"/></ComboBox></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0771}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="BackgroundPositionInput" Width="180" SelectionChanged="VisualInput_Changed"><ComboBoxItem Content="{loc:Text Text0772}" Tag="TopLeft"/><ComboBoxItem Content="{loc:Text Text0773}" Tag="Top"/><ComboBoxItem Content="{loc:Text Text0774}" Tag="TopRight"/><ComboBoxItem Content="{loc:Text Text0775}" Tag="Left"/><ComboBoxItem Content="{loc:Text Text0776}" Tag="Center"/><ComboBoxItem Content="{loc:Text Text0777}" Tag="Right"/><ComboBoxItem Content="{loc:Text Text0778}" Tag="BottomLeft"/><ComboBoxItem Content="{loc:Text Text0779}" Tag="Bottom"/><ComboBoxItem Content="{loc:Text Text0780}" Tag="BottomRight"/></ComboBox></StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"><TextBlock Text="{loc:Text Text0781}" Width="180" VerticalAlignment="Center"/><Slider x:Name="TerminalOpacityInput" Width="260" Minimum="0.35" Maximum="1" ValueChanged="VisualInput_Changed" AutoToolTipPlacement="TopLeft"/></StackPanel>
                             <TextBlock x:Name="BackgroundStatusText" Foreground="{DynamicResource Theme.SecondaryText}" TextWrapping="Wrap"/>
                         </StackPanel></Border>
 
 </StackPanel></ScrollViewer></TabItem>
-<TabItem Header="快捷键" Tag="&#xE765;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><CheckBox x:Name="HotkeyEnabledInput" Content="启用全局命令面板热键" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="命令面板热键" Width="180" VerticalAlignment="Center"/><TextBox x:Name="HotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
-<CheckBox x:Name="FocusHotkeyEnabledInput" Content="启用全局专注模式热键" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="专注模式热键" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FocusHotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<TabItem Header="{loc:Text Text0782}" Tag="&#xE765;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><CheckBox x:Name="HotkeyEnabledInput" Content="{loc:Text Text0783}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0784}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="HotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<CheckBox x:Name="FocusHotkeyEnabledInput" Content="{loc:Text Text0785}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0786}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FocusHotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 
 <TextBlock x:Name="HotkeyStatusText" Margin="0,4,0,12"/>
-<TextBlock Text="热键保存后生效；冲突时保留原组合。" Margin="0,0,0,12"/>
+<TextBlock Text="{loc:Text Text0787}" Margin="0,0,0,12"/>
 <ItemsControl x:Name="ShortcutList"><ItemsControl.ItemTemplate><DataTemplate><Border Padding="4,7" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="0,0,0,1"><DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding Shortcut}" Width="215" TextWrapping="Wrap"/><TextBlock Text="{Binding Title}"/></DockPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-<TextBlock Text="Ctrl+C 中断，Ctrl+Shift+C 复制选区。清屏 / 清回滚只清理显示缓冲，不执行 Shell 命令。" Margin="0,12,0,0"/>
+<TextBlock Text="{loc:Text Text0788}" Margin="0,12,0,0"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
-<TabItem Header="配置与 Profile" Tag="&#xE8B7;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="工作台" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="默认 Profile" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="DefaultProfileInput" Width="240" SelectedValuePath="Id" SelectionChanged="WorkbenchInput_Changed"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
-<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="标签位置" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="TabPositionInput" Width="160" SelectionChanged="WorkbenchInput_Changed"><ComboBoxItem Content="顶部" Tag="Top"/><ComboBoxItem Content="底部" Tag="Bottom"/><ComboBoxItem Content="左侧" Tag="Left"/></ComboBox></StackPanel>
-<CheckBox x:Name="ConfirmCloseInput" Content="关闭运行中会话前确认" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<TabItem Header="{loc:Text Text0789}" Tag="&#xE8B7;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="{loc:Text Text0077}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0790}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="DefaultProfileInput" Width="240" SelectedValuePath="Id" SelectionChanged="WorkbenchInput_Changed"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Language}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="LanguageInput" Width="240" SelectedValuePath="Tag" SelectionChanged="WorkbenchInput_Changed"><ComboBoxItem Content="English" Tag="en-US"/><ComboBoxItem Content="{loc:Text Text0791}" Tag="zh-CN"/></ComboBox></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text TimeZone}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="TimeZoneInput" Width="360" SelectedValuePath="Id" DisplayMemberPath="DisplayName" SelectionChanged="WorkbenchInput_Changed"/></StackPanel>
+<StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0792}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="TabPositionInput" Width="160" SelectionChanged="WorkbenchInput_Changed"><ComboBoxItem Content="{loc:Text Text0773}" Tag="Top"/><ComboBoxItem Content="{loc:Text Text0779}" Tag="Bottom"/><ComboBoxItem Content="{loc:Text Text0775}" Tag="Left"/></ComboBox></StackPanel>
+<CheckBox x:Name="ConfirmCloseInput" Content="{loc:Text Text0793}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
 
-<CheckBox x:Name="HistoryEnabledInput" Content="本次运行记录应用命令历史（重启后关闭）" Click="HistoryEnabled_Click" Margin="0,8"/>
-<CheckBox x:Name="TranscriptionEnabledInput" Content="转录当前会话输出（每个新会话默认关闭）" Click="ToggleTranscript_Click" Margin="0,8"/>
+<CheckBox x:Name="HistoryEnabledInput" Content="{loc:Text Text0794}" Click="HistoryEnabled_Click" Margin="0,8"/>
+<CheckBox x:Name="TranscriptionEnabledInput" Content="{loc:Text Text0795}" Click="ToggleTranscript_Click" Margin="0,8"/>
 <TextBlock x:Name="RecordingStatusText" TextWrapping="Wrap" Margin="0,0,0,8"/>
-<WrapPanel Margin="0,0,0,12"><Button Content="查看 / 搜索应用历史" Click="ViewHistory_Click"/><Button Content="清除应用历史" Click="ClearHistory_Click"/><Button Content="停止并清除全部转录" Click="ClearTranscripts_Click"/></WrapPanel>
-<TextBlock Text="记录须手动开启，不影响 Shell 自身历史。Ctrl+单击终端链接可预览目标。" TextWrapping="Wrap" Margin="0,0,0,16"/>
-<TextBlock Text="Shell 通知（仅窗口失焦，无声音）" FontWeight="SemiBold"/>
-<CheckBox x:Name="NotifyCompletedInput" Content="命令完成" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
-<CheckBox x:Name="NotifyLongTaskInput" Content="长任务结束" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
-<CheckBox x:Name="NotifyReadyInput" Content="Shell 提示符等待输入" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
-<StackPanel Orientation="Horizontal" Margin="0,6,0,16"><TextBlock Text="长任务门槛（秒）" Width="180" VerticalAlignment="Center"/><TextBox x:Name="LongTaskSecondsInput" Width="160" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<WrapPanel Margin="0,0,0,12"><Button Content="{loc:Text Text0796}" Click="ViewHistory_Click"/><Button Content="{loc:Text Text0190}" Click="ClearHistory_Click"/><Button Content="{loc:Text Text0797}" Click="ClearTranscripts_Click"/></WrapPanel>
+<TextBlock Text="{loc:Text Text0798}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+<TextBlock Text="{loc:Text Text0799}" FontWeight="SemiBold"/>
+<CheckBox x:Name="NotifyCompletedInput" Content="{loc:Text Text0800}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
+<CheckBox x:Name="NotifyLongTaskInput" Content="{loc:Text Text0801}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
+<CheckBox x:Name="NotifyReadyInput" Content="{loc:Text Text0802}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,6"/>
+<StackPanel Orientation="Horizontal" Margin="0,6,0,16"><TextBlock Text="{loc:Text Text0803}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="LongTaskSecondsInput" Width="160" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <ContentControl x:Name="ProfileEditorHost"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
-<TabItem Header="诊断与数据" Tag="&#xE9D9;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="诊断与数据" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+<TabItem Header="{loc:Text Text0804}" Tag="&#xE9D9;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="{loc:Text Text0804}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
 <TextBlock x:Name="SettingsDataRootText" Margin="0,0,0,12"/>
-<WrapPanel><Button Content="预览诊断导出" Click="PreviewDiagnostics_Click"/><Button Content="显示 / 隐藏性能面板" Click="PerformancePanel_Click"/></WrapPanel>
-<TextBlock Text="诊断仅含版本、能力、固定事件/错误码与性能计数。正文、完整命令、环境变量和转录目录不进入默认预览。确认之前不创建导出文件。" Margin="0,10"/>
-<WrapPanel><Button Content="打开数据目录" Click="OpenDataDirectory_Click"/><Button Content="清理诊断日志 / 导出" Click="ClearDiagnostics_Click"/><Button Content="清空最近项目" Click="ClearRecents_Click"/></WrapPanel>
-<TextBlock Text="日志：每文件 512 KiB，最多 3 份，7 天；导出：每份 1 MiB，最多 5 份，7 天。清理不操作配置、背景原图、Shell 历史或会话正文。" Margin="0,10"/>
+<WrapPanel><Button Content="{loc:Text Text0085}" Click="PreviewDiagnostics_Click"/><Button Content="{loc:Text Text0084}" Click="PerformancePanel_Click"/></WrapPanel>
+<TextBlock Text="{loc:Text Text0805}" Margin="0,10"/>
+<WrapPanel><Button Content="{loc:Text Text0806}" Click="OpenDataDirectory_Click"/><Button Content="{loc:Text Text0807}" Click="ClearDiagnostics_Click"/><Button Content="{loc:Text Text0808}" Click="ClearRecents_Click"/></WrapPanel>
+<TextBlock Text="{loc:Text Text0809}" Margin="0,10"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
 </TabControl>
 <Border Grid.Row="2" Margin="0,12,0,0" Padding="14,10" CornerRadius="12" Background="{DynamicResource Theme.SurfaceBackground}"><StackPanel><StackPanel.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="FontSize" Value="12"/><Setter Property="Padding" Value="10,6"/><Setter Property="Margin" Value="0,3,6,3"/></Style></StackPanel.Resources><TextBlock x:Name="SettingsValidationText" Foreground="{DynamicResource Theme.ErrorBorder}" TextWrapping="Wrap" Margin="0,0,0,6"/>
-<WrapPanel><Button x:Name="SaveDraftButton" Content="保存设置" Style="{StaticResource PrimaryButton}" Click="SaveDraftButton_Click"/><Button x:Name="CancelDraftButton" Content="取消设置预览" Click="CancelDraftButton_Click"/><Button Content="恢复当前分类默认值" Click="RestoreDefaults_Click"/><Button Content="重载正式配置" Click="ReloadFormal_Click"/><Button Content="重试草稿清理" Click="RetryCleanup_Click"/></WrapPanel>
-<WrapPanel x:Name="ProfileSaveBar" Margin="0,6,0,0" Visibility="Collapsed"><Button x:Name="SaveProfilesButton" Content="保存 Profile" Style="{StaticResource PrimaryButton}" Click="SaveProfiles_Click"/><Button x:Name="CancelProfilesButton" Content="取消 Profile 草稿" Click="CancelProfiles_Click"/></WrapPanel>
+<WrapPanel><Button x:Name="SaveDraftButton" Content="{loc:Text Text0810}" Style="{StaticResource PrimaryButton}" Click="SaveDraftButton_Click"/><Button x:Name="CancelDraftButton" Content="{loc:Text Text0811}" Click="CancelDraftButton_Click"/><Button Content="{loc:Text Text0812}" Click="RestoreDefaults_Click"/><Button Content="{loc:Text Text0813}" Click="ReloadFormal_Click"/><Button Content="{loc:Text Text0814}" Click="RetryCleanup_Click"/></WrapPanel>
+<WrapPanel x:Name="ProfileSaveBar" Margin="0,6,0,0" Visibility="Collapsed"><Button x:Name="SaveProfilesButton" Content="{loc:Text Text0815}" Style="{StaticResource PrimaryButton}" Click="SaveProfiles_Click"/><Button x:Name="CancelProfilesButton" Content="{loc:Text Text0816}" Click="CancelProfiles_Click"/></WrapPanel>
 </StackPanel></Border></Grid>
                 <Grid x:Name="TerminalPanel" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <DockPanel Margin="4,0,4,8">
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                             <TextBlock x:Name="TranscriptStatusText" VerticalAlignment="Center" FontSize="12" Margin="0,0,8,0"/>
-                            <Button x:Name="ToggleTranscriptButton" Content="开始转录" Click="ToggleTranscript_Click" ToolTip="手动开启 / 停止当前会话文本转录"/>
-                            <Button Content="&#xE74A;" Style="{StaticResource IconButton}" Click="ReturnBottom_Click" ToolTip="回到最新" AutomationProperties.Name="回到最新"/>
-                            <Button Content="&#xE8C8;" Style="{StaticResource IconButton}" Click="DuplicateActive_Click" ToolTip="重复会话" AutomationProperties.Name="重复会话"/>
-                            <Button Content="&#xE72C;" Style="{StaticResource IconButton}" Click="RestartActive_Click" ToolTip="重启会话" AutomationProperties.Name="重启会话"/>
+                            <Button x:Name="ToggleTranscriptButton" Content="{loc:Text Text0165}" Click="ToggleTranscript_Click" ToolTip="{loc:Text Text0817}"/>
+                            <Button Content="&#xE74A;" Style="{StaticResource IconButton}" Click="ReturnBottom_Click" ToolTip="{loc:Text Text0099}" AutomationProperties.Name="{loc:Text Text0099}"/>
+                            <Button Content="&#xE8C8;" Style="{StaticResource IconButton}" Click="DuplicateActive_Click" ToolTip="{loc:Text Text0818}" AutomationProperties.Name="{loc:Text Text0818}"/>
+                            <Button Content="&#xE72C;" Style="{StaticResource IconButton}" Click="RestartActive_Click" ToolTip="{loc:Text Text0716}" AutomationProperties.Name="{loc:Text Text0716}"/>
                         </StackPanel>
                         <Grid VerticalAlignment="Center"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock x:Name="CommandDurationText" Margin="0,0,8,0" Visibility="Collapsed"/><TextBlock x:Name="TerminalStatusText" Grid.Column="1" FontSize="12" Foreground="{DynamicResource Theme.SecondaryText}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/></Grid>
                     </DockPanel>
                     <Border x:Name="SearchPanel" Grid.Row="1" Padding="8" CornerRadius="10" Background="{DynamicResource Theme.CardBackground}" Margin="0,0,0,8" Visibility="Collapsed">
                         <DockPanel>
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="&#xE70E;" Style="{StaticResource IconButton}" Click="SearchPrevious_Click" ToolTip="上一个" AutomationProperties.Name="上一个匹配"/><Button Content="&#xE70D;" Style="{StaticResource IconButton}" Click="SearchNext_Click" ToolTip="下一个" AutomationProperties.Name="下一个匹配"/><Button Content="&#xE8BB;" Style="{StaticResource IconButton}" Click="CloseSearch_Click" ToolTip="关闭搜索" AutomationProperties.Name="关闭搜索"/><TextBlock x:Name="SearchStatusText" VerticalAlignment="Center" FontSize="12" Margin="8,0"/></StackPanel>
-                            <TextBox x:Name="SearchInput" TextChanged="SearchInput_TextChanged" KeyDown="SearchInput_KeyDown" AutomationProperties.Name="搜索终端"/>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="&#xE70E;" Style="{StaticResource IconButton}" Click="SearchPrevious_Click" ToolTip="{loc:Text Text0819}" AutomationProperties.Name="{loc:Text Text0820}"/><Button Content="&#xE70D;" Style="{StaticResource IconButton}" Click="SearchNext_Click" ToolTip="{loc:Text Text0821}" AutomationProperties.Name="{loc:Text Text0822}"/><Button Content="&#xE8BB;" Style="{StaticResource IconButton}" Click="CloseSearch_Click" ToolTip="{loc:Text Text0823}" AutomationProperties.Name="{loc:Text Text0823}"/><TextBlock x:Name="SearchStatusText" VerticalAlignment="Center" FontSize="12" Margin="8,0"/></StackPanel>
+                            <TextBox x:Name="SearchInput" TextChanged="SearchInput_TextChanged" KeyDown="SearchInput_KeyDown" AutomationProperties.Name="{loc:Text Text0824}"/>
                         </DockPanel>
                     </Border>
                     <controls:RoundedBorder x:Name="TerminalFrame" Grid.Row="2" CornerRadius="12" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
@@ -297,29 +300,29 @@
                         </Grid></controls:RoundedBorder>
                     </controls:RoundedBorder>
                     <Border x:Name="PlaceholderPanel" Grid.Row="2" Padding="28" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480"><TextBlock x:Name="PlaceholderTitle" FontSize="24" FontWeight="SemiBold"/><TextBlock x:Name="PlaceholderDetails" Foreground="{DynamicResource Theme.SecondaryText}" TextWrapping="Wrap" Margin="0,12,0,20"/><Button Content="启动此会话" Style="{StaticResource PrimaryButton}" Click="StartPlaceholder_Click" HorizontalAlignment="Left"/></StackPanel>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480"><TextBlock x:Name="PlaceholderTitle" FontSize="24" FontWeight="SemiBold"/><TextBlock x:Name="PlaceholderDetails" Foreground="{DynamicResource Theme.SecondaryText}" TextWrapping="Wrap" Margin="0,12,0,20"/><Button Content="{loc:Text Text0825}" Style="{StaticResource PrimaryButton}" Click="StartPlaceholder_Click" HorizontalAlignment="Left"/></StackPanel>
                     </Border>
-                    <TextBlock x:Name="TerminalShortcutHint" Grid.Row="3" Margin="4,8,0,0" FontSize="11" Foreground="{DynamicResource Theme.SecondaryText}" Text="Ctrl+Shift+C / V  复制 / 粘贴     Ctrl+F  搜索     Ctrl+Tab  切换标签"/>
+                    <TextBlock x:Name="TerminalShortcutHint" Grid.Row="3" Margin="4,8,0,0" FontSize="11" Foreground="{DynamicResource Theme.SecondaryText}" Text="{loc:Text Text0826}"/>
                 </Grid>
             </Grid>
 
             <Border x:Name="CommandPalette" Grid.Row="0" Grid.RowSpan="4" Grid.ColumnSpan="3" Visibility="Collapsed" Background="{DynamicResource Theme.OverlayBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="12" Width="560" MaxHeight="430" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,58,0,0" Panel.ZIndex="10">
                 <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                    <TextBox x:Name="CommandInput" TextChanged="CommandInput_TextChanged" KeyDown="CommandInput_KeyDown" FontSize="16" Padding="12,10" AutomationProperties.Name="搜索命令"/>
+                    <TextBox x:Name="CommandInput" TextChanged="CommandInput_TextChanged" KeyDown="CommandInput_KeyDown" FontSize="16" Padding="12,10" AutomationProperties.Name="{loc:Text Text0827}"/>
                     <ListBox x:Name="CommandResults" Grid.Row="1" Margin="0,8,0,0" BorderThickness="0" Background="Transparent" MaxHeight="300" MouseDoubleClick="CommandResults_MouseDoubleClick">
                         <ListBox.ItemTemplate><DataTemplate><DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding Shortcut}" Foreground="{DynamicResource Theme.SecondaryText}" FontSize="11" VerticalAlignment="Center" Margin="16,0,0,0"/><StackPanel><TextBlock Text="{Binding Title}"/><TextBlock Text="{Binding Category}" FontSize="11" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,3,0,0"/></StackPanel></DockPanel></DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
-                    <TextBlock Grid.Row="2" Text="↑ ↓  选择     Enter  执行     Esc  关闭" FontSize="11" Foreground="{DynamicResource Theme.SecondaryText}" Margin="8,12,0,2"/>
+                    <TextBlock Grid.Row="2" Text="{loc:Text Text0828}" FontSize="11" Foreground="{DynamicResource Theme.SecondaryText}" Margin="8,12,0,2"/>
                 </Grid>
             </Border>
             <Border x:Name="PerformancePanel" Grid.Row="4" Grid.ColumnSpan="3" Visibility="Collapsed" CornerRadius="10" Background="{DynamicResource Theme.CardBackground}" Padding="12" Margin="10,8,10,0" MaxHeight="180">
-                <DockPanel><Button DockPanel.Dock="Right" Content="关闭指标" Click="PerformancePanel_Click" VerticalAlignment="Top"/><ScrollViewer VerticalScrollBarVisibility="Auto"><TextBlock x:Name="PerformanceText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/></ScrollViewer></DockPanel>
+                <DockPanel><Button DockPanel.Dock="Right" Content="{loc:Text Text0829}" Click="PerformancePanel_Click" VerticalAlignment="Top"/><ScrollViewer VerticalScrollBarVisibility="Auto"><TextBlock x:Name="PerformanceText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/></ScrollViewer></DockPanel>
             </Border>
             <Border x:Name="DiagnosticPreviewPanel" Grid.Row="1" Grid.RowSpan="3" Grid.ColumnSpan="3" Visibility="Collapsed" Panel.ZIndex="20" CornerRadius="14" Margin="24,12" Padding="20" Background="{DynamicResource Theme.OverlayBackground}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
                 <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                    <StackPanel Margin="0,0,0,16"><TextBlock Text="诊断预览" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="你可以编辑下方内容，确认后将保存最终文本。" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,6,0,0"/></StackPanel>
+                    <StackPanel Margin="0,0,0,16"><TextBlock Text="{loc:Text Text0830}" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="{loc:Text Text0831}" Foreground="{DynamicResource Theme.SecondaryText}" Margin="0,6,0,0"/></StackPanel>
                     <TextBox x:Name="DiagnosticPreviewInput" Grid.Row="1" AcceptsReturn="True" AcceptsTab="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12" TextChanged="DiagnosticPreview_TextChanged"/>
-                    <StackPanel Grid.Row="2" Margin="0,12,0,0"><TextBlock x:Name="DiagnosticSizeText" Margin="0,0,0,8"/><WrapPanel><Button x:Name="ConfirmDiagnosticButton" Content="确认导出" Style="{StaticResource PrimaryButton}" Click="ConfirmDiagnostic_Click"/><Button Content="取消" Click="CancelDiagnostic_Click"/></WrapPanel></StackPanel>
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0"><TextBlock x:Name="DiagnosticSizeText" Margin="0,0,0,8"/><WrapPanel><Button x:Name="ConfirmDiagnosticButton" Content="{loc:Text Text0832}" Style="{StaticResource PrimaryButton}" Click="ConfirmDiagnostic_Click"/><Button Content="{loc:Text Text0218}" Click="CancelDiagnostic_Click"/></WrapPanel></StackPanel>
                 </Grid>
             </Border>
             <StatusBar Grid.Row="5" Grid.ColumnSpan="3" MinHeight="26" Margin="12,2">

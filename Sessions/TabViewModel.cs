@@ -110,7 +110,7 @@ public sealed class TabViewModel : INotifyPropertyChanged
     public int ScrollbackOffset { get; set; }
     public string SearchQuery { get; set; } = string.Empty;
     public double? ZoomFontSize { get; set; }
-    public string ProfileName => Launch?.ProfileName ?? "新建";
+    public string ProfileName => Launch?.ProfileName ?? Localize.T("Text0360");
     public string Icon => Launch?.Icon ?? string.Empty;
     public string WorkingDirectory => Launch?.WorkingDirectory ?? string.Empty;
     public string ToolTipText => $"{Title}\n{StatusText}\n{ProfileName}\n{WorkingDirectory}";
@@ -127,14 +127,14 @@ public sealed class TabViewModel : INotifyPropertyChanged
     public bool IsActive { get => _isActive; set { _isActive = value; OnPropertyChanged(); } }
     public string StatusText => State switch
     {
-        TabRuntimeState.NewPage => "新建页",
-        TabRuntimeState.NotStarted => "未启动",
-        TabRuntimeState.Starting => "正在启动",
-        TabRuntimeState.Running => "运行中",
-        TabRuntimeState.Closing => "正在关闭",
-        TabRuntimeState.Exited => "已退出",
-        TabRuntimeState.Failed => string.IsNullOrWhiteSpace(Error) ? "异常退出" : $"异常 · {Error}",
-        _ => "未知"
+        TabRuntimeState.NewPage => Localize.T("Text0078"),
+        TabRuntimeState.NotStarted => Localize.T("Text0411"),
+        TabRuntimeState.Starting => Localize.T("Text0412"),
+        TabRuntimeState.Running => Localize.T("Text0413"),
+        TabRuntimeState.Closing => Localize.T("Text0414"),
+        TabRuntimeState.Exited => Localize.T("Text0415"),
+        TabRuntimeState.Failed => string.IsNullOrWhiteSpace(Error) ? Localize.T("Text0416") : Localize.F("Text0417", Error),
+        _ => Localize.T("Text0056")
     };
 
     public RecoveryTabState ToRecoveryState(int order) => new()

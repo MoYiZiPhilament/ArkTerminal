@@ -55,19 +55,19 @@ public sealed class WindowMaterialService
     {
         if (_hwnd == IntPtr.Zero)
         {
-            return new(WindowMaterialMode.Off, false, "窗口句柄尚未就绪。", false);
+            return new(WindowMaterialMode.Off, false, Localize.T("Text0433"), false);
         }
         SetDarkMode(dark);
         var cornerResult = ApplyWindowCorners();
         if (!Capabilities.CompositionEnabled)
         {
             ResetEffects();
-            return new(WindowMaterialMode.Off, false, "DWM 合成不可用，已使用不透明背景。", false);
+            return new(WindowMaterialMode.Off, false, Localize.T("Text0434"), false);
         }
         if (cornerResult != 0)
         {
             ResetEffects();
-            return new(WindowMaterialMode.Off, false, $"窗口圆角设置失败（0x{cornerResult:X8}），已回退不透明背景；保存的材质偏好不变。", false);
+            return new(WindowMaterialMode.Off, false, Localize.F("Text0435", cornerResult), false);
         }
         if (_customCaption)
         {
@@ -77,14 +77,14 @@ public sealed class WindowMaterialService
             if (result != 0)
             {
                 ResetEffects();
-                return new(WindowMaterialMode.Off, false, $"自绘标题栏设置失败（0x{result:X8}），已回退不透明背景。", false);
+                return new(WindowMaterialMode.Off, false, Localize.F("Text0436", result), false);
             }
         }
         if (desktopBackground && !Capabilities.TransparencySupported ||
             (requested is WindowMaterialMode.Mica or WindowMaterialMode.Acrylic) && !Capabilities.SystemBackdropSupported)
         {
             ResetEffects();
-            return new(WindowMaterialMode.Off, false, $"{Capabilities.Summary}，已使用不透明背景；保存的材质偏好不变。", false);
+            return new(WindowMaterialMode.Off, false, Localize.F("Text0437", Capabilities.Summary), false);
         }
         var material = desktopBackground ? WindowMaterialMode.Acrylic : requested == WindowMaterialMode.Auto
             ? Capabilities.SystemBackdropSupported ? WindowMaterialMode.Mica : WindowMaterialMode.Off
@@ -93,7 +93,7 @@ public sealed class WindowMaterialService
         {
             if (!Capabilities.SystemBackdropSupported)
             {
-                return new(WindowMaterialMode.Off, false, "当前 Windows 不支持公开的系统 Backdrop API，已回退不透明。", false);
+                return new(WindowMaterialMode.Off, false, Localize.T("Text0438"), false);
             }
             var type = material == WindowMaterialMode.Mica ? DwmsbtMainWindow : DwmsbtTransientWindow;
             var frameResult = ExtendFrame(true);
@@ -102,20 +102,20 @@ public sealed class WindowMaterialService
             {
                 // Success describes the API request, not independent visual verification.
                 var status = desktopBackground
-                    ? "系统已接受 Acrylic 桌面后景请求；采样与模糊由系统决定。"
-                    : $"系统已接受 {material} 材质请求。";
-                return new(material, desktopBackground, status + " API 成功不代表移动后的视觉链路已通过验收。", true);
+                    ? Localize.T("Text0439")
+                    : Localize.F("Text0440", material);
+                return new(material, desktopBackground, status + Localize.T("Text0441"), true);
             }
             ResetEffects();
-            return new(WindowMaterialMode.Off, false, $"{material} 设置失败（backdrop 0x{result:X8}，frame 0x{frameResult:X8}），已回退不透明。", false);
+            return new(WindowMaterialMode.Off, false, Localize.F("Text0442", material, result, frameResult), false);
         }
         var backdropResult = Capabilities.SystemBackdropApiAvailable ? SetSystemBackdrop(DwmsbtNone) : 0;
         var clearFrameResult = ExtendFrame(false);
         if (backdropResult != 0 || clearFrameResult != 0)
         {
-            return new(WindowMaterialMode.Off, false, $"系统材质清除失败（backdrop 0x{backdropResult:X8}，frame 0x{clearFrameResult:X8}）。", false);
+            return new(WindowMaterialMode.Off, false, Localize.F("Text0443", backdropResult, clearFrameResult), false);
         }
-        return new(WindowMaterialMode.Off, false, "窗口材质已关闭，使用应用内背景。", true);
+        return new(WindowMaterialMode.Off, false, Localize.T("Text0444"), true);
     }
 
     public bool IsCloaked()
@@ -191,10 +191,10 @@ public sealed class WindowMaterialService
         var backdropApi = build >= 22621;
         var backdrop = composition && backdropApi;
         var summary = !composition
-            ? "DWM 合成不可用"
+            ? Localize.T("Text0445")
             : backdrop
-                ? "公开系统 Backdrop API 可用；实际视觉效果仍需在对应平台验收"
-                : "无可用的公开系统 Mica/Acrylic Backdrop，真实后景已回退不透明";
+                ? Localize.T("Text0446")
+                : Localize.T("Text0447");
         return new(composition, backdrop, backdrop, summary) { SystemBackdropApiAvailable = backdropApi };
     }
 

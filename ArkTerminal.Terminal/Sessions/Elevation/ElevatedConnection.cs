@@ -28,9 +28,9 @@ internal sealed class ElevatedConnection : IAsyncDisposable
     {
         if (ElevationSupport.UnavailableReason is { } unsupported) throw new PlatformNotSupportedException(unsupported);
         var helperPath = Path.GetFullPath(options.ElevationHostPath ?? Path.Combine(AppContext.BaseDirectory, "ArkTerminal.exe"));
-        if (!File.Exists(helperPath)) throw new FileNotFoundException("找不到 UAC 辅助器入口。", helperPath);
+        if (!File.Exists(helperPath)) throw new FileNotFoundException(Localize.T("Text0512"), helperPath);
         var data = JsonSerializer.SerializeToUtf8Bytes(new ElevationLaunch(ElevationProtocol.Version, session, options.InitialColumns, options.InitialRows, request));
-        if (data.Length >= ElevationProtocol.MaxFrameBytes) throw new ArgumentException("提权启动请求过长。");
+        if (data.Length >= ElevationProtocol.MaxFrameBytes) throw new ArgumentException(Localize.T("Text0513"));
         var hash = Convert.ToHexString(SHA256.HashData(data));
         var name = "ArkTerminal.Elevation." + Guid.NewGuid().ToString("N");
         var pipe = ElevationProtocol.CreateLocalServer(name);
@@ -41,24 +41,24 @@ internal sealed class ElevatedConnection : IAsyncDisposable
             var info = new ProcessStartInfo(helperPath) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = Path.GetDirectoryName(helperPath)! };
             foreach (var argument in new[] { "--elevated-host", name, current.Id.ToString(), current.StartTime.ToUniversalTime().Ticks.ToString(), hash }) info.ArgumentList.Add(argument);
             // ShellExecute/UAC runs off the dispatcher. No shell exists before the authenticated launch frame.
-            helper = await Task.Run(() => Process.Start(info) ?? throw new IOException("UAC 未返回辅助器进程。")).ConfigureAwait(false);
+            helper = await Task.Run(() => Process.Start(info) ?? throw new IOException(Localize.T("Text0514"))).ConfigureAwait(false);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
             timeout.CancelAfter(ElevationProtocol.HandshakeTimeout);
             var helperStart = helper.StartTime.ToUniversalTime().Ticks;
             var connect = pipe.WaitForConnectionAsync(timeout.Token);
             var helperExit = helper.WaitForExitAsync(timeout.Token);
-            if (await Task.WhenAny(connect, helperExit).ConfigureAwait(false) != connect) throw new IOException("提权辅助器在连接前退出。");
+            if (await Task.WhenAny(connect, helperExit).ConfigureAwait(false) != connect) throw new IOException(Localize.T("Text0515"));
             await connect.ConfigureAwait(false);
             using var peer = ElevationProtocol.VerifyPeer(pipe, true, helper.Id, helperStart, helperPath, requireElevated: true);
             await ElevationProtocol.SendAsync(pipe, ElevationMessage.Launch, data, timeout.Token).ConfigureAwait(false);
             var ready = await ElevationProtocol.ReadAsync(pipe, timeout.Token).ConfigureAwait(false);
             if (ready.Type != ElevationMessage.Ready || !ready.Payload.AsSpan().SequenceEqual(session.ToByteArray()))
-                throw new IOException(ready.Type == ElevationMessage.Error ? Encoding.UTF8.GetString(ready.Payload) : "辅助器未确认本次会话。");
+                throw new IOException(ready.Type == ElevationMessage.Error ? Encoding.UTF8.GetString(ready.Payload) : Localize.T("Text0516"));
             var connection = new ElevatedConnection(pipe, helper, output, exited);
             return connection;
         }
         catch (Win32Exception error) when (error.NativeErrorCode == 1223)
-        { pipe.Dispose(); helper?.Dispose(); throw new OperationCanceledException("UAC 已取消；未启动管理员 Shell。", error, token); }
+        { pipe.Dispose(); helper?.Dispose(); throw new OperationCanceledException(Localize.T("Text0517"), error, token); }
         catch
         { pipe.Dispose(); helper?.Dispose(); throw; }
     }
@@ -93,11 +93,11 @@ internal sealed class ElevatedConnection : IAsyncDisposable
                 if (frame.Type == ElevationMessage.Output && frame.Payload.Length <= ElevationProtocol.MaxIoBytes) _output(frame.Payload);
                 else if (frame.Type == ElevationMessage.Exited && frame.Payload.Length == 0) break;
                 else if (frame.Type == ElevationMessage.Error) { error = Encoding.UTF8.GetString(frame.Payload.AsSpan(0, Math.Min(frame.Payload.Length, 2048))); break; }
-                else throw new IOException("辅助器发送了不允许的消息。");
+                else throw new IOException(Localize.T("Text0518"));
             }
         }
         catch (Exception failure) when (failure is IOException or ObjectDisposedException or OperationCanceledException)
-        { if (!_lifetime.IsCancellationRequested) error = "管理员辅助器连接中断；会话已结束。"; }
+        { if (!_lifetime.IsCancellationRequested) error = Localize.T("Text0519"); }
         finally
         {
             _lifetime.Cancel(); _pipe.Dispose();

@@ -18,7 +18,7 @@ public sealed class TranscriptService : IAsyncDisposable
     public TranscriptService(IAppDataPaths paths) => _directory = paths.SessionSavesDirectory;
     public TranscriptStatus GetStatus(Guid session)
     {
-        lock (_sync) return _sessions.TryGetValue(session, out var writer) ? writer.Status : new(false, false, "转录已关闭");
+        lock (_sync) return _sessions.TryGetValue(session, out var writer) ? writer.Status : new(false, false, Localize.T("Text0674"));
     }
 
     public async Task StartAsync(Guid session, TranscriptionPolicy policy)
@@ -112,7 +112,7 @@ public sealed class TranscriptService : IAsyncDisposable
         {
             var victim = files.FirstOrDefault(file => !ActiveFile(file.FullName, writer) &&
                 (files.Sum(RecordedLength) + incoming > writer.Policy.MaxTotalSizeBytes || files.Count >= RecordingLimits.MaxTranscriptFiles || file.Name.StartsWith(ownPrefix, StringComparison.Ordinal)));
-            if (victim is null) throw new IOException("转录配额已被活动会话占用；当前记录已停止。");
+            if (victim is null) throw new IOException(Localize.T("Text0675"));
             victim.Delete(); files.Remove(victim); writer.Truncated = true;
         }
     }
@@ -149,7 +149,7 @@ public sealed class TranscriptService : IAsyncDisposable
         private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(RecordingLimits.QueueCapacity) { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
         private volatile bool _accepting;
         private volatile bool _truncated;
-        private string _message = "转录已关闭";
+        private string _message = Localize.T("Text0674");
         private Task _worker = Task.CompletedTask;
         private FileStream? _stream;
         private long _length;
@@ -174,7 +174,7 @@ public sealed class TranscriptService : IAsyncDisposable
                     Path = System.IO.Path.Combine(owner._directory, "ark-output-" + Session.ToString("N") + "-" + Guid.NewGuid().ToString("N") + ".txt");
                     owner.EnforceQuota(this, 256);
                     _stream = new FileStream(Path, FileMode.CreateNew, FileAccess.Write, FileShare.Read | FileShare.Delete, 4096, true);
-                    var header = Encoding.UTF8.GetBytes("ArkTerminal 文本转录：仅开启后的输出；可能含程序回显的秘密。动态覆盖/备用屏不保证重放。达到上限会轮换并截断。\r\n");
+                    var header = Encoding.UTF8.GetBytes(Localize.T("Text0676"));
                     await _stream.WriteAsync(header).ConfigureAwait(false);
                     Interlocked.Exchange(ref _length, header.Length);
                     await _stream.FlushAsync().ConfigureAwait(false);
@@ -183,19 +183,19 @@ public sealed class TranscriptService : IAsyncDisposable
             catch { if (_stream is not null) await _stream.DisposeAsync().ConfigureAwait(false); throw; }
             finally { owner._files.Release(); }
         }
-        internal void Start() { _accepting = true; _message = "● 正在转录输出（可能包含回显的秘密）"; _worker = Task.Run(RunAsync); }
+        internal void Start() { _accepting = true; _message = Localize.T("Text0677"); _worker = Task.Run(RunAsync); }
         internal void Append(string text)
         {
             if (!_accepting || text.Length == 0) return;
             if (text.Length <= RecordingLimits.MaxTextChunkCharacters && _queue.Writer.TryWrite(text)) return;
-            _truncated = true; _accepting = false; _message = "转录队列已满，已截断并停止；终端继续运行。";
+            _truncated = true; _accepting = false; _message = Localize.T("Text0678");
             _queue.Writer.TryComplete(); owner.Changed?.Invoke(Session);
         }
         internal async Task StopAsync()
         {
             _accepting = false; _queue.Writer.TryComplete();
             await _worker.ConfigureAwait(false);
-            if (!_message.Contains("失败") && !_message.Contains("队列")) _message = _truncated ? "转录已停止；记录曾轮换/截断。" : "转录已停止。";
+            if (!_message.Contains(Localize.T("Text0161")) && !_message.Contains(Localize.T("Text0679"))) _message = _truncated ? Localize.T("Text0680") : Localize.T("Text0681");
             owner.Changed?.Invoke(Session);
         }
         private async Task RunAsync()
@@ -219,7 +219,7 @@ public sealed class TranscriptService : IAsyncDisposable
                                 await _stream.DisposeAsync().ConfigureAwait(false);
                                 Path = System.IO.Path.Combine(owner._directory, "ark-output-" + Session.ToString("N") + "-" + Guid.NewGuid().ToString("N") + ".txt");
                                 Interlocked.Exchange(ref _length, 0);
-                                var header = Encoding.UTF8.GetBytes("ArkTerminal 转录片段：前文已轮换 / 截断；动态覆盖和备用屏不保证重放。\r\n");
+                                var header = Encoding.UTF8.GetBytes(Localize.T("Text0682"));
                                 owner.EnforceQuota(this, header.Length);
                                 _stream = new FileStream(Path, FileMode.CreateNew, FileAccess.Write, FileShare.Read | FileShare.Delete, 4096, true);
                                 await _stream.WriteAsync(header).ConfigureAwait(false);
@@ -243,12 +243,12 @@ public sealed class TranscriptService : IAsyncDisposable
                 }
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            { _accepting = false; _message = "转录写入失败，已停止；终端继续运行。"; Truncated = true; owner.Changed?.Invoke(Session); }
+            { _accepting = false; _message = Localize.T("Text0683"); Truncated = true; owner.Changed?.Invoke(Session); }
             finally
             {
                 try { if (_stream is not null) await _stream.DisposeAsync().ConfigureAwait(false); }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-                { _accepting = false; _message = "转录写入失败，已停止；终端继续运行。"; Truncated = true; owner.Changed?.Invoke(Session); }
+                { _accepting = false; _message = Localize.T("Text0683"); Truncated = true; owner.Changed?.Invoke(Session); }
             }
         }
     }

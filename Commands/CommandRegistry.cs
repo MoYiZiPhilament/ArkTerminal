@@ -16,7 +16,7 @@ public sealed class CommandDescriptor
     public required string Title { get; init; }
     public required string Category { get; init; }
     public string Keywords { get; init; } = string.Empty;
-    public string Shortcut { get; init; } = "未绑定";
+    public string Shortcut { get; init; } = Localize.T("Text0047");
     public CommandScope Scope { get; init; }
     public IReadOnlyList<ShortcutGesture> Gestures { get; init; } = [];
     public Func<bool> CanExecute { get; init; } = () => true;
@@ -41,10 +41,24 @@ public sealed class CommandRegistry : ICommandRegistry
         .FirstOrDefault(command => (command.Scope != CommandScope.Terminal || terminalFocused) && command.CanExecute() && command.Gestures.Contains(new(key, modifiers)));
     public IReadOnlyList<CommandDescriptor> Search(string query, int maximumResults = 100) => _sources
         .SelectMany(source => source())
+        .Select(Localized)
         .Where(command => string.IsNullOrWhiteSpace(query) ||
             command.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
             command.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase) ||
             command.Category.Contains(query, StringComparison.OrdinalIgnoreCase))
         .Take(maximumResults)
         .ToArray();
+
+    private static CommandDescriptor Localized(CommandDescriptor command) => new()
+    {
+        Id = command.Id,
+        Title = Localize.RefreshText(command.Title),
+        Category = Localize.RefreshText(command.Category),
+        Keywords = Localize.RefreshText(command.Keywords),
+        Shortcut = Localize.RefreshText(command.Shortcut),
+        Scope = command.Scope,
+        Gestures = command.Gestures,
+        CanExecute = command.CanExecute,
+        ExecuteAsync = command.ExecuteAsync
+    };
 }

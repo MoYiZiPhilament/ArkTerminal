@@ -41,10 +41,10 @@ public static class ElevatedHost
             parent = ElevationProtocol.VerifyPeer(pipe, false, parentId, parentStart, Environment.ProcessPath!, requireElevated: false);
             parentWatch = Task.Run(async () => { try { await parent.WaitForExitAsync(lifetime.Token).ConfigureAwait(false); lifetime.Cancel(); pipe.Dispose(); } catch (OperationCanceledException) { } });
             var frame = await ElevationProtocol.ReadAsync(pipe, handshake.Token).ConfigureAwait(false);
-            if (frame.Type != ElevationMessage.Launch || !Convert.ToHexString(SHA256.HashData(frame.Payload)).Equals(arguments[4], StringComparison.Ordinal)) throw new IOException("启动请求与 UAC 绑定值不匹配。");
-            var launch = JsonSerializer.Deserialize<ElevationLaunch>(frame.Payload) ?? throw new IOException("启动请求无效。");
+            if (frame.Type != ElevationMessage.Launch || !Convert.ToHexString(SHA256.HashData(frame.Payload)).Equals(arguments[4], StringComparison.Ordinal)) throw new IOException(Localize.T("Text0520"));
+            var launch = JsonSerializer.Deserialize<ElevationLaunch>(frame.Payload) ?? throw new IOException(Localize.T("Text0521"));
             if (launch.Version != ElevationProtocol.Version || launch.SessionId == Guid.Empty || !launch.Request.RunAsAdministrator || launch.Request.AgentRecipe is not null ||
-                launch.Columns is < 1 or > 32767 || launch.Rows is < 1 or > 32767) throw new IOException("启动协议版本或会话模式无效。");
+                launch.Columns is < 1 or > 32767 || launch.Rows is < 1 or > 32767) throw new IOException(Localize.T("Text0522"));
             var local = new SessionLaunchRequest
             {
                 ProfileId = launch.Request.ProfileId, ExecutablePath = launch.Request.ExecutablePath,
@@ -62,7 +62,7 @@ public static class ElevatedHost
                 if (args.State is SessionState.Exited or SessionState.Failed)
                 {
                     QueueOutput(args.State == SessionState.Failed ? ElevationMessage.Error : ElevationMessage.Exited,
-                        args.State == SessionState.Failed ? Encoding.UTF8.GetBytes("管理员会话异常结束。") : []);
+                        args.State == SessionState.Failed ? Encoding.UTF8.GetBytes(Localize.T("Text0523")) : []);
                     output.Writer.TryComplete();
                 }
             };
@@ -92,7 +92,7 @@ public static class ElevatedHost
                         await session.ResizeAsync(BinaryPrimitives.ReadInt32LittleEndian(frame.Payload), BinaryPrimitives.ReadInt32LittleEndian(frame.Payload.AsSpan(4)), idle.Token).ConfigureAwait(false); break;
                     case ElevationMessage.Ping when frame.Payload.Length == 0: break;
                     case ElevationMessage.Close when frame.Payload.Length == 0: return 0;
-                    default: throw new IOException("此连接只接受已确认会话的输入、尺寸、心跳与关闭，禁止再次启动。");
+                    default: throw new IOException(Localize.T("Text0524"));
                 }
             }
             return 0;
@@ -104,7 +104,7 @@ public static class ElevatedHost
                 try
                 {
                     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-                    await ElevationProtocol.SendAsync(pipe, ElevationMessage.Error, Encoding.UTF8.GetBytes("提权启动未完成：" + error.Message[..Math.Min(error.Message.Length, 1024)]), timeout.Token).ConfigureAwait(false);
+                    await ElevationProtocol.SendAsync(pipe, ElevationMessage.Error, Encoding.UTF8.GetBytes(Localize.T("Text0525") + error.Message[..Math.Min(error.Message.Length, 1024)]), timeout.Token).ConfigureAwait(false);
                 }
                 catch (Exception failure) when (failure is IOException or ObjectDisposedException or OperationCanceledException) { }
             }

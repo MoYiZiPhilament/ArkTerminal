@@ -20,18 +20,18 @@ public partial class MainWindow
             ShowSettings();
             SettingsCategories.SelectedIndex = 2;
             Dispatcher.BeginInvoke(() => _profileEditor.BringIntoView());
-            StatusText.Text = "Agent 配方已加入独立 Profile 草稿；检查后点击保存 Profile。";
+            StatusText.Text = Localize.T("Text0029");
         };
         _tabs.PrepareAgentLaunch = PrepareAgentLaunchAsync;
         Loaded += async (_, _) => await _agentPicker.StartAsync();
         _commands.Register(new CommandDescriptor
         {
-            Id = "agent.detect", Title = "刷新 Agent CLI 版本", Category = "Agent", Keywords = "检测 codex claude kimi opencode agy codebuddy dsh",
+            Id = "agent.detect", Title = Localize.T("Text0030"), Category = "Agent", Keywords = Localize.T("Text0031"),
             ExecuteAsync = async _ => { ShowAgents(); await _agentPicker.RefreshVersionsAsync(); }
         });
         _commands.Register(() => _host.AgentAdapters.Entries.Where(entry => entry.Enabled && entry.Error is null && entry.Definition is not null).Select(entry => new CommandDescriptor
         {
-            Id = "agent.recipe." + entry.Definition!.Id, Title = "编辑 / 启动 Agent：" + entry.Definition.DisplayName, Category = "Agent",
+            Id = "agent.recipe." + entry.Definition!.Id, Title = Localize.T("Text0032") + entry.Definition.DisplayName, Category = "Agent",
             ExecuteAsync = _ => { ShowAgents(); _agentPicker.SelectAdapter(entry.Definition.Id); return Task.CompletedTask; }
         }).ToArray());
     }
@@ -48,9 +48,9 @@ public partial class MainWindow
     {
         var plan = await _host.Agents.PrepareAsync(request);
         if (_closing || _allowClose) return null;
-        var detail = plan.Preview + "\n\n目录：" + request.WorkingDirectory +
-            "\n环境继承当前进程，值不显示或写入检测日志。关闭标签结束本会话的进程树。\nAgent 的任务状态与耗时在没有可靠信号时显示未知。";
-        if (!AgentPickerControl.Review(this, "确认 Agent 启动", detail, "启动")) return null;
+        var detail = plan.Preview + Localize.T("Text0033") + request.WorkingDirectory +
+            Localize.T("Text0034");
+        if (!AgentPickerControl.Review(this, Localize.T("Text0035"), detail, Localize.T("Text0036"))) return null;
         tab.AgentBackendDescription = plan.Shell.Description;
         return plan.Request;
     }

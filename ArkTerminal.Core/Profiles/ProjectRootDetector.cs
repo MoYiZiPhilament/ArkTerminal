@@ -21,14 +21,14 @@ public static class ProjectRootDetector
     {
         if (string.IsNullOrWhiteSpace(directory) || directory.Contains('\0') || maximumParentLevels is < 0 or > 5)
         {
-            return new ProjectRootDetectionResult { Error = "目录或父级层数无效。" };
+            return new ProjectRootDetectionResult { Error = Localize.T("Text0657") };
         }
         try
         {
             var current = new DirectoryInfo(Path.GetFullPath(directory));
             if (!current.Exists)
             {
-                return new ProjectRootDetectionResult { Error = "目录不存在或当前不可访问。" };
+                return new ProjectRootDetectionResult { Error = Localize.T("Text0658") };
             }
             var candidates = new List<ProjectRootCandidate>();
             for (var level = 0; level <= maximumParentLevels && current is not null; level++)
@@ -57,7 +57,7 @@ public static class ProjectRootDetector
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
         {
-            return new ProjectRootDetectionResult { Error = $"识别目录失败：{exception.Message}" };
+            return new ProjectRootDetectionResult { Error = Localize.F("Text0659", exception.Message) };
         }
     }
 }

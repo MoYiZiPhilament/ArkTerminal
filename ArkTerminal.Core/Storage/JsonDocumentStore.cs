@@ -62,7 +62,7 @@ public sealed class JsonDocumentStore<T>
                 var length = new FileInfo(_path).Length;
                 if (length > _options.MaxDocumentBytes)
                 {
-                    return new DocumentLoadResult<T> { Status = DocumentLoadStatus.TooLarge, Error = $"文档超过 {_options.MaxDocumentBytes} 字节上限：{_path}" };
+                    return new DocumentLoadResult<T> { Status = DocumentLoadStatus.TooLarge, Error = Localize.F("Text0692", _options.MaxDocumentBytes, _path) };
                 }
                 bytes = await File.ReadAllBytesAsync(_path, cancellationToken);
             }
@@ -80,16 +80,16 @@ public sealed class JsonDocumentStore<T>
                     AllowTrailingCommas = false,
                     CommentHandling = JsonCommentHandling.Disallow,
                     MaxDepth = 32
-                }) as JsonObject ?? throw new JsonException("JSON 根必须是对象。");
+                }) as JsonObject ?? throw new JsonException(Localize.T("Text0554"));
             }
             catch (JsonException exception)
             {
-                return await CorruptLoadResultAsync(bytes, $"JSON 损坏：{exception.Message}", cancellationToken);
+                return await CorruptLoadResultAsync(bytes, Localize.F("Text0693", exception.Message), cancellationToken);
             }
 
             if (!TryGetSchemaVersion(root, out var version))
             {
-                return await CorruptLoadResultAsync(bytes, "schemaVersion 缺失或不是整数。", cancellationToken);
+                return await CorruptLoadResultAsync(bytes, Localize.T("Text0694"), cancellationToken);
             }
 
             if (version > ConfigurationDefaults.CurrentSchemaVersion)
@@ -98,13 +98,13 @@ public sealed class JsonDocumentStore<T>
                 {
                     Status = DocumentLoadStatus.UnsupportedNewerVersion,
                     Revision = revision,
-                    Error = $"文档 schemaVersion={version}，当前应用仅支持 {ConfigurationDefaults.CurrentSchemaVersion}；原文件不会被覆盖。"
+                    Error = Localize.F("Text0695", version, ConfigurationDefaults.CurrentSchemaVersion)
                 };
             }
 
             if (version < 1 || version < ConfigurationDefaults.CurrentSchemaVersion && _migrator is null)
             {
-                return await CorruptLoadResultAsync(bytes, $"不支持的 schemaVersion={version}，且没有可用迁移。", cancellationToken);
+                return await CorruptLoadResultAsync(bytes, Localize.F("Text0696", version), cancellationToken);
             }
 
             try
@@ -130,7 +130,7 @@ public sealed class JsonDocumentStore<T>
             }
             catch (Exception exception) when (exception is JsonException or NotSupportedException or InvalidOperationException)
             {
-                return await CorruptLoadResultAsync(bytes, $"配置字段无效：{exception.Message}", cancellationToken);
+                return await CorruptLoadResultAsync(bytes, Localize.F("Text0697", exception.Message), cancellationToken);
             }
         }
         finally
@@ -167,7 +167,7 @@ public sealed class JsonDocumentStore<T>
                 {
                     if (new FileInfo(_path).Length > _options.MaxDocumentBytes)
                     {
-                        return new DocumentSaveResult { Status = DocumentSaveStatus.Invalid, Error = "现有文档超过大小上限，未覆盖。" };
+                        return new DocumentSaveResult { Status = DocumentSaveStatus.Invalid, Error = Localize.T("Text0698") };
                     }
                     current = await File.ReadAllBytesAsync(_path, cancellationToken);
                 }
@@ -179,7 +179,7 @@ public sealed class JsonDocumentStore<T>
                 var currentRevision = ComputeRevision(current);
                 if (expectedRevision is not null && !string.Equals(expectedRevision, currentRevision, StringComparison.Ordinal))
                 {
-                    return new DocumentSaveResult { Status = DocumentSaveStatus.Conflict, Error = "文件已被其他写入方修改；未覆盖。" };
+                    return new DocumentSaveResult { Status = DocumentSaveStatus.Conflict, Error = Localize.T("Text0699") };
                 }
 
                 var protection = await CheckOverwriteProtectionAsync(current, replaceInvalid, cancellationToken);
@@ -190,13 +190,13 @@ public sealed class JsonDocumentStore<T>
             }
             else if (!string.IsNullOrEmpty(expectedRevision))
             {
-                return new DocumentSaveResult { Status = DocumentSaveStatus.Conflict, Error = "文件已由其他写入方创建；未覆盖。" };
+                return new DocumentSaveResult { Status = DocumentSaveStatus.Conflict, Error = Localize.T("Text0700") };
             }
 
             var bytes = JsonSerializer.SerializeToUtf8Bytes(value, _serializerOptions);
             if (bytes.Length > _options.MaxDocumentBytes)
             {
-                return new DocumentSaveResult { Status = DocumentSaveStatus.Invalid, Error = $"文档超过 {_options.MaxDocumentBytes} 字节上限。" };
+                return new DocumentSaveResult { Status = DocumentSaveStatus.Invalid, Error = Localize.F("Text0701", _options.MaxDocumentBytes) };
             }
 
             try
@@ -256,14 +256,14 @@ public sealed class JsonDocumentStore<T>
             var root = JsonNode.Parse(current) as JsonObject;
             if (root is null || !TryGetSchemaVersion(root, out var version))
             {
-                return replaceInvalid ? null : new DocumentSaveResult { Status = DocumentSaveStatus.Invalid, Error = "现有文档损坏；须由用户明确恢复默认后才能覆盖。" };
+                return replaceInvalid ? null : new DocumentSaveResult { Status = DocumentSaveStatus.Invalid, Error = Localize.T("Text0702") };
             }
             if (version > ConfigurationDefaults.CurrentSchemaVersion)
             {
                 return new DocumentSaveResult
                 {
                     Status = DocumentSaveStatus.UnsupportedNewerVersion,
-                    Error = "现有文档来自更高版本，未覆盖。"
+                    Error = Localize.T("Text0703")
                 };
             }
             if (!replaceInvalid)
@@ -277,7 +277,7 @@ public sealed class JsonDocumentStore<T>
             return replaceInvalid ? null : new DocumentSaveResult
             {
                 Status = DocumentSaveStatus.Invalid,
-                Error = $"现有文档无效，未自动覆盖：{exception.Message}"
+                Error = Localize.F("Text0704", exception.Message)
             };
         }
     }
@@ -296,7 +296,7 @@ public sealed class JsonDocumentStore<T>
         }
         catch (Exception exception) when (IsIo(exception))
         {
-            error = $"{error}{Environment.NewLine}备份失败：{exception.Message}";
+            error = Localize.F("Text0705", error, Environment.NewLine, exception.Message);
             backupPath = null;
         }
 

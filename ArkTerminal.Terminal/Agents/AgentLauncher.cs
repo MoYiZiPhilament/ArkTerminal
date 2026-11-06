@@ -14,16 +14,16 @@ public sealed class AgentLauncher(AgentAdapterRegistry registry, ISessionManager
 {
     public async Task<AgentLaunchPlan> PrepareAsync(SessionLaunchRequest request, CancellationToken token = default)
     {
-        var recipe = request.AgentRecipe ?? throw new ArgumentException("没有 Agent 配方。");
+        var recipe = request.AgentRecipe ?? throw new ArgumentException(Localize.T("Text0471"));
         // Re-read approval hashes at every explicit launch. Cached results never authorize JSON code execution.
         await registry.ReloadAsync(token).ConfigureAwait(false);
         return await Task.Run(() =>
         {
             var entry = registry.Entries.FirstOrDefault(item => item.Definition?.Id == recipe.AgentId && item.Enabled && item.Error is null)
-                ?? throw new ArgumentException("Agent 适配器不存在、被禁用或文件已改变；请重新审核启用。");
+                ?? throw new ArgumentException(Localize.T("Text0472"));
             var definition = entry.Definition!;
             var path = AgentDetector.FindExecutable(definition, registry.OverridePaths.GetValueOrDefault(definition.Id) ?? definition.OverridePath, token: token).Path
-                ?? throw new FileNotFoundException("Agent 未安装或路径已失效；请在 Agent 区修正路径。");
+                ?? throw new FileNotFoundException(Localize.T("Text0473"));
             var directory = ShellLaunchAdapter.ResolveWorkingDirectory(request.WorkingDirectory);
             var arguments = AgentRecipeRules.BuildArguments(definition, recipe, directory);
             var shell = AgentPowerShell.ResolveBackend(recipe.ShellBackend);

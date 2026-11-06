@@ -23,8 +23,8 @@ public partial class MainWindow
         WindowFrame.CornerRadius = new CornerRadius(maximized || _visuals.UsesNativeWindowCorners ? 0 : 12);
         WindowFrame.BorderThickness = new Thickness(maximized ? 0 : 1);
         MaximizeWindowButton.Content = maximized ? "\uE923" : "\uE922";
-        MaximizeWindowButton.ToolTip = maximized ? "还原" : "最大化";
-        System.Windows.Automation.AutomationProperties.SetName(MaximizeWindowButton, maximized ? "还原" : "最大化");
+        MaximizeWindowButton.ToolTip = maximized ? Localize.T("Text0037") : Localize.T("Text0038");
+        System.Windows.Automation.AutomationProperties.SetName(MaximizeWindowButton, maximized ? Localize.T("Text0037") : Localize.T("Text0038"));
     }
 
     private void UpdateWorkbenchChrome()
@@ -39,10 +39,10 @@ public partial class MainWindow
         TabHost.Visibility = _settingsVisible ? Visibility.Collapsed : Visibility.Visible;
         NavigationPanel.Visibility = _settingsVisible || _focusMode ? Visibility.Collapsed : Visibility.Visible;
         CaptionTitle.Visibility = _tabPosition == TerminalTabPosition.Top && !_settingsVisible ? Visibility.Collapsed : Visibility.Visible;
-        CaptionTitle.Text = _settingsVisible ? "设置" : Title;
+        CaptionTitle.Text = _settingsVisible ? Localize.T("Text0039") : Title;
         AppMenuButton.Content = _settingsVisible ? "\uE72B" : "\uE700";
-        AppMenuButton.ToolTip = _settingsVisible ? "返回工作台" : "应用菜单";
-        System.Windows.Automation.AutomationProperties.SetName(AppMenuButton, _settingsVisible ? "返回工作台" : "应用菜单");
+        AppMenuButton.ToolTip = _settingsVisible ? Localize.T("Text0040") : Localize.T("Text0041");
+        System.Windows.Automation.AutomationProperties.SetName(AppMenuButton, _settingsVisible ? Localize.T("Text0040") : Localize.T("Text0041"));
         TerminalShortcutHint.Visibility = _focusMode ? Visibility.Collapsed : Visibility.Visible;
     }
 

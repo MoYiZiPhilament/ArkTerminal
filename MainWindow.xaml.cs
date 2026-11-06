@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Shell;
 using ArkTerminal.Commands;
 using ArkTerminal.Core.Configuration;
+using ArkTerminal.Core.Localization;
 using ArkTerminal.Core.Profiles;
 using ArkTerminal.Core.Storage;
 using ArkTerminal.Infrastructure;
@@ -79,13 +80,36 @@ public partial class MainWindow : Window
         InitializeStageEight();
         InitializeStageNine();
         InitializeWindowChrome();
+        Localize.Changed += () => Dispatcher.BeginInvoke(RefreshLocalizedContent);
+    }
+
+    private void RefreshLocalizedContent()
+    {
+        if (!_stageSixReady) return;
+        _hotkey.RefreshLocalization();
+        HotkeyStatusText.Text = _hotkey.StatusText;
+        ModeText.Text = Localize.F("Text0201", _host.Paths.Mode);
+        DataRootText.Text = Localize.F("Text0202", _host.Paths.RootDirectory);
+        SettingsDataRootText.Text = Localize.F("Text0125", _host.Paths.Mode, _host.Paths.RootDirectory);
+        RefreshDefaultProfiles();
+        _profileEditor.Reload();
+        _agentPicker.RefreshLocalization();
+        ShortcutList.ItemsSource = _commands.Search(string.Empty).Where(command => !command.Id.StartsWith("tab.activate.", StringComparison.Ordinal) && !command.Id.StartsWith("profile.launch.", StringComparison.Ordinal)).ToArray();
+        TabStrip.Items.Refresh();
+        UpdateActiveStatus();
+        UpdateFontPreviews();
+        UpdatePerformanceButton();
+        UpdateCaptionButtons();
+        ConfigureWindowFallback();
+        VisualCapabilityText.Text = _visuals.CapabilityText;
+        if (CommandPalette.Visibility == Visibility.Visible) RefreshCommands();
     }
 
     private void InitializeView()
     {
         _initializing = true;
-        ModeText.Text = $"模式：{_host.Paths.Mode}";
-        DataRootText.Text = $"实际数据目录：{_host.Paths.RootDirectory}";
+        ModeText.Text = Localize.F("Text0201", _host.Paths.Mode);
+        DataRootText.Text = Localize.F("Text0202", _host.Paths.RootDirectory);
         ProfilesList.ItemsSource = _host.Catalog?.Profiles;
         DirectoryInput.Text = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         RefreshRecents();
@@ -106,15 +130,15 @@ public partial class MainWindow : Window
         _commands.Register(() => _tabs.Tabs.Select(tab => new CommandDescriptor
         {
             Id = $"tab.activate.{tab.TabId:N}",
-            Title = $"切换到：{tab.Title} · {tab.StatusText}",
-            Category = "标签",
+            Title = Localize.F("Text0203", tab.Title, tab.StatusText),
+            Category = Localize.T("Text0204"),
             Keywords = $"{tab.ProfileName} {tab.WorkingDirectory}",
             ExecuteAsync = _ => { _tabs.Activate(tab); return Task.CompletedTask; }
         }).ToArray());
         _commands.Register(() => _host.Catalog?.Profiles.Select(profile => new CommandDescriptor
         {
             Id = $"profile.launch.{profile.Id}",
-            Title = $"启动 Profile：{profile.Name}",
+            Title = Localize.F("Text0205", profile.Name),
             Category = "Profile",
             Keywords = profile.WorkingDirectory,
             ExecuteAsync = _ => LaunchProfileAsync(profile, DirectoryInput.Text)
@@ -164,7 +188,7 @@ public partial class MainWindow : Window
             MotionPolicy.Hide(SearchPanel, false);
         }
         UpdateActiveStatus();
-        TabCountText.Text = $"{_tabs.Tabs.Count} 个标签";
+        TabCountText.Text = Localize.F("Text0206", _tabs.Tabs.Count);
         Dispatcher.BeginInvoke(() =>
         {
             if (TabStrip.ItemContainerGenerator.ContainerFromItem(tab) is FrameworkElement container)
@@ -193,10 +217,10 @@ public partial class MainWindow : Window
     {
         var tab = _tabs.ActiveTab;
         Title = $"ArkTerminal · {tab.Title}";
-        TabCountText.Text = $"{_tabs.Tabs.Count} 个标签";
+        TabCountText.Text = Localize.F("Text0206", _tabs.Tabs.Count);
         TerminalStatusText.Text = tab.IsNewPage ? string.Empty : $"{tab.StatusText} · {tab.ProfileName}";
         PlaceholderTitle.Text = tab.Title;
-        PlaceholderDetails.Text = $"{tab.StatusText}\n{tab.WorkingDirectory}\n启动前不会执行启动后输入，也不会触发 UAC。";
+        PlaceholderDetails.Text = Localize.F("Text0207", tab.StatusText, tab.WorkingDirectory);
         if (!string.IsNullOrEmpty(tab.Error)) PlaceholderDetails.Text += "\n" + tab.Error;
         UpdateWorkbenchChrome();
         UpdateShellDisplay();
@@ -244,17 +268,17 @@ public partial class MainWindow : Window
             if (tab.State == TabRuntimeState.Running)
             {
                 await AddRecentAsync(launch.WorkingDirectory);
-                StatusText.Text = $"已启动 {profile.Name}。" + (profile.AgentRecipe is null ? tab.Session?.ShellStatus.Detail : string.Empty);
+                StatusText.Text = Localize.F("Text0208", profile.Name) + (profile.AgentRecipe is null ? tab.Session?.ShellStatus.Detail : string.Empty);
             }
             else
             {
-                StatusText.Text = tab.Error ?? "会话未能启动。";
+                StatusText.Text = tab.Error ?? Localize.T("Text0209");
             }
         }
         catch (Exception exception)
         {
             _host.Diagnostics.Record(ArkTerminal.Core.Diagnostics.DiagnosticComponent.Terminal, ArkTerminal.Core.Diagnostics.DiagnosticEventKind.StartFailed, exception.HResult);
-            StatusText.Text = $"启动失败：{exception.Message}";
+            StatusText.Text = Localize.F("Text0210", exception.Message);
         }
     }
 
@@ -291,7 +315,7 @@ public partial class MainWindow : Window
 
     private async Task RestartAsync(TabViewModel tab)
     {
-        if (tab.Launch is null || !ConfirmRunning(tab, "重启"))
+        if (tab.Launch is null || !ConfirmRunning(tab, Localize.T("Text0211")))
         {
             return;
         }
@@ -302,7 +326,7 @@ public partial class MainWindow : Window
             return;
         }
         var profile = _host.Catalog?.Profiles.FirstOrDefault(item => item.Id == tab.Launch.Request.ProfileId);
-        if (profile is null) { StatusText.Text = "Profile 已删除，请在新建页重新选择。"; return; }
+        if (profile is null) { StatusText.Text = Localize.T("Text0212"); return; }
         var directory = tab.Launch.WorkingDirectoryIsExplicit ? tab.WorkingDirectory : ExpandHome(profile.AgentRecipe?.WorkingDirectory ?? profile.WorkingDirectory);
         var replacement = TabLaunchConfiguration.FromProfile(profile, directory, _host.FormalSettings?.Appearance, tab.Launch.WorkingDirectoryIsExplicit);
         if (profile.AgentRecipe is null)
@@ -316,7 +340,7 @@ public partial class MainWindow : Window
 
     private async Task CloseTabAsync(TabViewModel tab)
     {
-        if (tab.IsNewPage || !ConfirmRunning(tab, "关闭"))
+        if (tab.IsNewPage || !ConfirmRunning(tab, Localize.T("Text0213")))
         {
             return;
         }
@@ -329,7 +353,7 @@ public partial class MainWindow : Window
         {
             return true;
         }
-        return MessageBox.Show(this, $"“{tab.Title}”仍在运行。确定{action}吗？", action, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        return MessageBox.Show(this, Localize.F("Text0214", tab.Title, action), action, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
 
     private void NewPage_Click(object sender, RoutedEventArgs e)
@@ -403,19 +427,19 @@ public partial class MainWindow : Window
         if (sender is not FrameworkElement { DataContext: TabViewModel tab } || tab.IsNewPage) return;
         var input = new TextBox { Text = tab.FixedTitle ?? string.Empty, Margin = new Thickness(0, 12, 0, 16) };
         var panel = new StackPanel { Margin = new Thickness(20) };
-        panel.Children.Add(new TextBlock { Text = "标签名称", FontSize = 18, FontWeight = FontWeights.SemiBold });
-        panel.Children.Add(new TextBlock { Text = "留空将恢复 Shell 标题。", Margin = new Thickness(0, 6, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = Localize.T("Text0215"), FontSize = 18, FontWeight = FontWeights.SemiBold });
+        panel.Children.Add(new TextBlock { Text = Localize.T("Text0216"), Margin = new Thickness(0, 6, 0, 0) });
         panel.Children.Add(input);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var save = new Button { Content = "保存", Style = (Style)FindResource("PrimaryButton"), IsDefault = true };
-        var cancel = new Button { Content = "取消", IsCancel = true };
+        var save = new Button { Content = Localize.T("Text0217"), Style = (Style)FindResource("PrimaryButton"), IsDefault = true };
+        var cancel = new Button { Content = Localize.T("Text0218"), IsCancel = true };
         actions.Children.Add(save);
         actions.Children.Add(cancel);
         panel.Children.Add(actions);
         var frame = new Controls.RoundedBorder { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), Child = panel };
         frame.SetResourceReference(Border.BackgroundProperty, "Theme.CardBackground");
         frame.SetResourceReference(Border.BorderBrushProperty, "Theme.BorderBrush");
-        var dialog = new Window { Owner = this, Title = "标签名称", Width = 420, SizeToContent = SizeToContent.Height,
+        var dialog = new Window { Owner = this, Title = Localize.T("Text0215"), Width = 420, SizeToContent = SizeToContent.Height,
             WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false,
             Background = (Brush)FindResource("Theme.CardBackground"), FontFamily = FontFamily, FontSize = FontSize,
             WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = frame };
@@ -427,7 +451,7 @@ public partial class MainWindow : Window
 
     private void BrowseDirectory_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "选择项目目录", InitialDirectory = DirectoryInput.Text };
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = Localize.T("Text0219"), InitialDirectory = DirectoryInput.Text };
         if (dialog.ShowDialog(this) == true)
         {
             DirectoryInput.Text = dialog.FolderName;
@@ -444,16 +468,16 @@ public partial class MainWindow : Window
         _detectCancellation?.Dispose();
         _detectCancellation = new CancellationTokenSource();
         DetectionResults.ItemsSource = null;
-        DetectionStatus.Text = "正在识别当前目录及最多 5 层父目录…";
+        DetectionStatus.Text = Localize.T("Text0220");
         try
         {
             var result = await ProjectRootDetector.DetectAsync(DirectoryInput.Text, 5, _detectCancellation.Token);
-            DetectionStatus.Text = result.Error ?? (result.Candidates.Count == 0 ? "未发现项目标记；仍可使用当前目录。" : "选择建议根目录只改变下次启动目录：");
+            DetectionStatus.Text = result.Error ?? (result.Candidates.Count == 0 ? Localize.T("Text0221") : Localize.T("Text0222"));
             DetectionResults.ItemsSource = result.Candidates.Select(candidate => new { Path = candidate.Path, DisplayText = $"{candidate.Path} · {string.Join(", ", candidate.Markers)}" }).ToArray();
         }
         catch (OperationCanceledException)
         {
-            DetectionStatus.Text = "项目识别已取消。";
+            DetectionStatus.Text = Localize.T("Text0223");
         }
     }
 
@@ -510,7 +534,7 @@ public partial class MainWindow : Window
                 var profile = _host.Catalog.Profiles.FirstOrDefault(item => item.Id == state.ProfileId);
                 if (profile is null)
                 {
-                    StatusText.Text = $"恢复占位缺少 Profile：{state.ProfileId}";
+                    StatusText.Text = Localize.F("Text0224", state.ProfileId);
                     continue;
                 }
                 try
@@ -521,7 +545,7 @@ public partial class MainWindow : Window
                 }
                 catch (Exception exception)
                 {
-                    StatusText.Text = $"恢复标签失败：{exception.Message}";
+                    StatusText.Text = Localize.F("Text0225", exception.Message);
                 }
             }
         }
@@ -538,7 +562,7 @@ public partial class MainWindow : Window
     {
         CancelDraftDebounce();
         var result = await _host.DiscardRecoveryAsync();
-        if (!ShowResult(result, "恢复数据已丢弃；正式设置未改变。")) return;
+        if (!ShowResult(result, Localize.T("Text0226"))) return;
         _tabs.RemoveRecoveredPlaceholders();
         RecoveryPanel.Visibility = Visibility.Collapsed;
         LoadSettingsControls(_host.FormalSettings);
@@ -603,13 +627,13 @@ public partial class MainWindow : Window
         if (!_host.CanEdit) return;
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "选择背景图（副本将保存到当前数据根）",
-            Filter = "支持的图片|*.png;*.jpg;*.jpeg;*.bmp|PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp",
+            Title = Localize.T("Text0227"),
+            Filter = Localize.T("Text0228"),
             CheckFileExists = true,
             Multiselect = false
         };
         if (dialog.ShowDialog(this) != true) return;
-        BackgroundStatusText.Text = "正在后台验证并复制图片…";
+        BackgroundStatusText.Text = Localize.T("Text0229");
         try
         {
             var result = await _visuals.ImportBackgroundAsync(dialog.FileName, CancellationToken.None);
@@ -621,12 +645,12 @@ public partial class MainWindow : Window
             _previewBackgroundPath = result.ResourcePath;
             _importedBackgrounds.Add(result.ResourcePath);
             BackgroundPathText.Text = Path.GetFileName(result.ResourcePath);
-            BackgroundStatusText.Text = "图片副本已就绪；保存设置后正式使用。";
+            BackgroundStatusText.Text = Localize.T("Text0230");
             PreviewDraft();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            BackgroundStatusText.Text = $"背景图导入失败：{exception.Message}";
+            BackgroundStatusText.Text = Localize.F("Text0231", exception.Message);
         }
     }
 
@@ -634,8 +658,8 @@ public partial class MainWindow : Window
     {
         if (!_host.CanEdit) return;
         _previewBackgroundPath = string.Empty;
-        BackgroundPathText.Text = "未设置";
-        BackgroundStatusText.Text = "预览已清除背景图；应用拥有的未引用副本将在保存或取消后清理。";
+        BackgroundPathText.Text = Localize.T("Text0126");
+        BackgroundStatusText.Text = Localize.T("Text0232");
         PreviewDraft();
     }
 
@@ -671,7 +695,7 @@ public partial class MainWindow : Window
         var desired = _host.Draft.Settings.Workbench;
         if (!_hotkey.Configure(desired, out var error))
         {
-            StatusText.Text = $"热键未更改：{error}";
+            StatusText.Text = Localize.F("Text0233", error);
             HotkeyStatusText.Text = _hotkey.StatusText;
             ConfigureWindowFallback();
             return false;
@@ -684,12 +708,13 @@ public partial class MainWindow : Window
             HotkeyStatusText.Text = _hotkey.StatusText;
             return ShowResult(result, string.Empty);
         }
+        Localize.Configure(_host.FormalSettings?.Regional);
         LoadSettingsControls(_host.FormalSettings);
         UpdateDraftControls();
         HotkeyStatusText.Text = _hotkey.StatusText;
         await CleanupBackgroundCopiesAsync(previousBackground);
         ConfigureWindowFallback();
-        return ShowResult(result, result.Warning ?? "正式设置已保存；草稿已清理。");
+        return ShowResult(result, result.Warning ?? Localize.T("Text0234"));
     }
 
     private async void CancelDraftButton_Click(object sender, RoutedEventArgs e) => await CancelDraftAsync();
@@ -698,7 +723,7 @@ public partial class MainWindow : Window
     {
         CancelDraftDebounce();
         var result = await _host.CancelDraftAsync();
-        if (!ShowResult(result, "预览已取消，草稿已删除。")) return false;
+        if (!ShowResult(result, Localize.T("Text0235"))) return false;
         LoadSettingsControls(_host.FormalSettings);
         UpdateDraftControls();
         await CleanupBackgroundCopiesAsync();
@@ -723,7 +748,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            BackgroundStatusText.Text = $"设置已生效，但未引用的背景副本清理失败：{exception.Message}";
+            BackgroundStatusText.Text = Localize.F("Text0236", exception.Message);
         }
     }
 
@@ -794,13 +819,13 @@ public partial class MainWindow : Window
         _visuals.TogglePerformanceMode();
         UpdatePerformanceButton();
         StatusText.Text = _visuals.PerformanceModeEnabled
-            ? "性能模式已启用：极光、透明/材质、模糊和非必要动效已临时关闭。"
-            : "性能模式已退出：已恢复当前正式设置或草稿的视觉偏好。";
+            ? Localize.T("Text0237")
+            : Localize.T("Text0238");
     }
 
     private void UpdatePerformanceButton()
     {
-        PerformanceModeButton.ToolTip = _visuals.PerformanceModeEnabled ? "退出性能模式" : "性能模式";
+        PerformanceModeButton.ToolTip = _visuals.PerformanceModeEnabled ? Localize.T("Text0239") : Localize.T("Text0240");
         PerformanceModeButton.SetResourceReference(ForegroundProperty, _visuals.PerformanceModeEnabled ? "Theme.AccentBrush" : "Theme.SecondaryText");
     }
 
@@ -818,7 +843,7 @@ public partial class MainWindow : Window
             _hotkey.Configure(settings, out var error);
             ConfigureWindowFallback();
             HotkeyStatusText.Text = _hotkey.StatusText;
-            if (!string.IsNullOrEmpty(error)) StatusText.Text = $"命令面板仍可从窗口按钮打开；{error}";
+            if (!string.IsNullOrEmpty(error)) StatusText.Text = Localize.F("Text0241", error);
         }
     }
 
@@ -864,7 +889,7 @@ public partial class MainWindow : Window
         if (CommandResults.SelectedItem is not CommandDescriptor command) return;
         CloseCommandPalette();
         try { await command.ExecuteAsync(CancellationToken.None); }
-        catch (Exception exception) { StatusText.Text = $"命令失败：{exception.Message}"; }
+        catch (Exception exception) { StatusText.Text = Localize.F("Text0242", exception.Message); }
     }
 
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -899,11 +924,11 @@ public partial class MainWindow : Window
     private void SearchNext_Click(object sender, RoutedEventArgs e) { TerminalView.NavigateSearch(1); UpdateSearchStatus(); }
     private void CloseSearch_Click(object sender, RoutedEventArgs e) => CloseSearch();
     private async void CloseSearch() { MotionPolicy.Hide(SearchPanel); SearchInput.Text = string.Empty; await TerminalView.SearchAsync(string.Empty); UpdateSearchStatus(); TerminalView.FocusInput(); }
-    private void UpdateSearchStatus() => SearchStatusText.Text = TerminalView.SearchMatchCount == 0 ? "无匹配" : $"{TerminalView.ActiveSearchMatch + 1}/{TerminalView.SearchMatchCount}";
+    private void UpdateSearchStatus() => SearchStatusText.Text = TerminalView.SearchMatchCount == 0 ? Localize.T("Text0243") : $"{TerminalView.ActiveSearchMatch + 1}/{TerminalView.SearchMatchCount}";
 
     private async void ResetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ShowResult(await _host.ResetInvalidDocumentsAsync(), "无效文档已恢复默认值；原损坏备份保留。")) InitializeView();
+        if (ShowResult(await _host.ResetInvalidDocumentsAsync(), Localize.T("Text0244"))) InitializeView();
     }
 
     private void RefreshErrors()
@@ -923,20 +948,20 @@ public partial class MainWindow : Window
             CancelDraftDebounce();
             if (_host.Draft is not null)
             {
-                var choice = MessageBox.Show(this, "存在未保存设置草稿。保存后关闭、放弃草稿，还是取消关闭？", "未保存设置", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                var choice = MessageBox.Show(this, Localize.T("Text0245"), Localize.T("Text0246"), MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
                 if (choice == MessageBoxResult.Cancel) return;
                 var completed = choice == MessageBoxResult.Yes ? await SaveDraftAsync() : await CancelDraftAsync();
                 if (!completed) return;
             }
             if (_host.ProfilesDraft is not null)
             {
-                var choice = MessageBox.Show(this, "存在未保存 Profile 草稿。保存、放弃，还是取消关闭？", "未保存 Profile", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                var choice = MessageBox.Show(this, Localize.T("Text0247"), Localize.T("Text0248"), MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
                 if (choice == MessageBoxResult.Cancel) return;
                 if (!(choice == MessageBoxResult.Yes ? await SaveProfilesWithLockAsync() : await _profileEditor.CancelAsync())) return;
             }
             if (_host.FormalSettings?.Workbench.ConfirmCloseRunning == true && _tabs.RunningTabs.Any())
             {
-                if (MessageBox.Show(this, "仍有运行中的会话。关闭窗口将结束这些会话，是否继续？", "关闭 ArkTerminal", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+                if (MessageBox.Show(this, Localize.T("Text0249"), Localize.T("Text0250"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             }
             _layoutDebounce?.Cancel();
             _detectCancellation?.Cancel();
@@ -968,7 +993,7 @@ public partial class MainWindow : Window
 
     private bool ShowResult(DocumentSaveResult result, string successMessage)
     {
-        if (!result.Success) { _host.Diagnostics.Record(ArkTerminal.Core.Diagnostics.DiagnosticComponent.Configuration, ArkTerminal.Core.Diagnostics.DiagnosticEventKind.WriteFailed); StatusText.Text = result.Error ?? "操作失败。"; return false; }
+        if (!result.Success) { _host.Diagnostics.Record(ArkTerminal.Core.Diagnostics.DiagnosticComponent.Configuration, ArkTerminal.Core.Diagnostics.DiagnosticEventKind.WriteFailed); StatusText.Text = result.Error ?? Localize.T("Text0251"); return false; }
         if (!string.IsNullOrEmpty(successMessage)) StatusText.Text = successMessage;
         return true;
     }

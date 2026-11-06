@@ -39,11 +39,11 @@ public static class ContextText
         try
         {
             foreach (var pattern in Secrets)
-                text = pattern.Replace(text, _ => { count++; return "[已脱敏]"; });
+                text = pattern.Replace(text, _ => { count++; return Localize.T("Text0642"); });
         }
         catch (RegexMatchTimeoutException)
         {
-            return new("[脱敏处理超时，正文已隐藏；请重新选择较小范围。]", true, count);
+            return new(Localize.T("Text0643"), true, count);
         }
         var final = Limit(text, maxLines, maxBytes);
         return new(final.Text, alreadyTruncated || bounded.Truncated || final.Truncated, count);
@@ -74,12 +74,12 @@ public static class ContextText
 
     public static void ValidatePreview(string text)
     {
-        if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("预览为空。");
-        if (Encoding.UTF8.GetByteCount(text) > ContextLimits.MaxPreviewBytes) throw new ArgumentException("最终预览超过 128 KiB，请缩短内容。");
-        if (!IsVisibleText(text)) throw new ArgumentException("预览包含控制或隐蔽格式字符，请重新生成或移除后再确认。");
+        if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException(Localize.T("Text0644"));
+        if (Encoding.UTF8.GetByteCount(text) > ContextLimits.MaxPreviewBytes) throw new ArgumentException(Localize.T("Text0645"));
+        if (!IsVisibleText(text)) throw new ArgumentException(Localize.T("Text0646"));
     }
 
-    public static string SafeField(string? text, int maxBytes = 1024) => Prepare(text ?? "未知", maxLines: 1, maxBytes: maxBytes).Text;
+    public static string SafeField(string? text, int maxBytes = 1024) => Prepare(text ?? Localize.T("Text0056"), maxLines: 1, maxBytes: maxBytes).Text;
 
     public static string StripControls(string text)
     {

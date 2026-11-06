@@ -61,11 +61,11 @@ public partial class MainWindow
                 {
                     var message = kind switch
                     {
-                        ShellNotificationKind.LongTask => "一个长任务已结束。返回终端查看结果。",
-                        ShellNotificationKind.CommandCompleted => "一个 Shell 命令已完成。返回终端查看结果。",
-                        _ => "Shell 已回到提示符，正在等待输入。"
+                        ShellNotificationKind.LongTask => Localize.T("Text0145"),
+                        ShellNotificationKind.CommandCompleted => Localize.T("Text0146"),
+                        _ => Localize.T("Text0147")
                     };
-                    if (_shellNotifications?.Show(message) == false) StatusText.Text = "Windows 未接受本次通知；可返回终端查看任务结果。";
+                    if (_shellNotifications?.Show(message) == false) StatusText.Text = Localize.T("Text0148");
                 }
             }
             UpdateShellDisplay();
@@ -80,49 +80,49 @@ public partial class MainWindow
         var transcript = session is null ? null : _host.Transcripts.GetStatus(session.Id);
         if (shell is not null)
         {
-            var state = shell.State switch { ShellCommandState.Ready => "等待命令", ShellCommandState.Running => "命令运行中", _ => "命令状态未知" };
-            var code = shell.ExitCode is { } exit ? $" · 退出码 {exit}" : shell.Succeeded is { } success ? success ? " · 成功（退出码未知）" : " · 失败（退出码未知）" : string.Empty;
-            TerminalStatusText.Text = $"{_tabs.ActiveTab.StatusText} · {(_tabs.ActiveTab.Launch?.Request.RunAsAdministrator == true ? "管理员 · " : string.Empty)}{state}{code} · {shell.WorkingDirectory ?? "cwd 未知"}";
-            TerminalStatusText.ToolTip = shell.Detail + "\nShell 信号仅供显示，不能授权执行或读取文件。\nCtrl+单击链接查看完整目标。";
+            var state = shell.State switch { ShellCommandState.Ready => Localize.T("Text0149"), ShellCommandState.Running => Localize.T("Text0150"), _ => Localize.T("Text0151") };
+            var code = shell.ExitCode is { } exit ? Localize.F("Text0152", exit) : shell.Succeeded is { } success ? success ? Localize.T("Text0153") : Localize.T("Text0154") : string.Empty;
+            TerminalStatusText.Text = $"{_tabs.ActiveTab.StatusText} · {(_tabs.ActiveTab.Launch?.Request.RunAsAdministrator == true ? Localize.T("Text0835") : string.Empty)}{state}{code} · {shell.WorkingDirectory ?? Localize.T("Text0836")}";
+            TerminalStatusText.ToolTip = shell.Detail + Localize.T("Text0155");
         }
         if (_tabs.ActiveTab.Launch?.Request.AgentRecipe is { } agent)
         {
-            TerminalStatusText.Text = $"{_tabs.ActiveTab.StatusText} · {agent.AgentId} · {_tabs.ActiveTab.AgentBackendDescription} · Agent 执行 / 等待状态：未知";
-            TerminalStatusText.ToolTip = "进程生命周期与 Agent 任务状态独立。没有可靠 Agent 事件，不从输出、Shell 存活或按键猜测忙碌与等待。";
+            TerminalStatusText.Text = Localize.F("Text0156", _tabs.ActiveTab.StatusText, agent.AgentId, _tabs.ActiveTab.AgentBackendDescription);
+            TerminalStatusText.ToolTip = Localize.T("Text0157");
         }
-        CommandDurationText.Text = shell?.Duration is { } duration ? $"耗时：{duration.TotalSeconds:0.###} s" : "耗时：未知";
-        TranscriptStatusText.Text = transcript?.Recording == true ? transcript.Truncated ? "● 转录中 · 已截断" : "● 转录中" :
-            transcript?.Message.Contains("失败", StringComparison.Ordinal) == true ? "转录停止 · 写入失败" : transcript?.Truncated == true ? "转录停止 · 已截断" : string.Empty;
+        CommandDurationText.Text = shell?.Duration is { } duration ? Localize.F("Text0158", duration.TotalSeconds) : Localize.T("Text0137");
+        TranscriptStatusText.Text = transcript?.Recording == true ? transcript.Truncated ? Localize.T("Text0159") : Localize.T("Text0160") :
+            transcript?.Message.Contains(Localize.T("Text0161"), StringComparison.Ordinal) == true ? Localize.T("Text0162") : transcript?.Truncated == true ? Localize.T("Text0163") : string.Empty;
         TranscriptStatusText.ToolTip = transcript?.Message;
         ToggleTranscriptButton.IsEnabled = session?.State == SessionState.Running && !_recordingBusy;
-        ToggleTranscriptButton.Content = transcript?.Recording == true ? "停止转录" : "开始转录";
+        ToggleTranscriptButton.Content = transcript?.Recording == true ? Localize.T("Text0164") : Localize.T("Text0165");
         HistoryEnabledInput.IsChecked = _host.CommandHistory.Enabled;
         TranscriptionEnabledInput.IsChecked = transcript?.Recording == true;
         TranscriptionEnabledInput.IsEnabled = session?.State == SessionState.Running && !_recordingBusy;
         var policy = _host.FormalSettings?.Transcription ?? new();
-        RecordingStatusText.Text = _host.CommandHistory.Status + "\n" + (transcript?.Message ?? "当前没有运行会话。") +
-            "\n历史上限：" + (_host.FormalSettings?.History.MaxEntries ?? 1000) + " 条 / " + (_host.FormalSettings?.History.MaxSizeBytes ?? 1048576) +
-            $" 字节；转录：每会话 {policy.MaxFileSizeBytes:N0} 字节 / 总量 {policy.MaxTotalSizeBytes:N0} 字节 / {policy.RetentionDays} 天。";
+        RecordingStatusText.Text = Localize.RefreshText(_host.CommandHistory.Status) + "\n" + (transcript?.Message is { } message ? Localize.RefreshText(message) : Localize.T("Text0166")) +
+            Localize.T("Text0167") + (_host.FormalSettings?.History.MaxEntries ?? 1000) + Localize.T("Text0168") + (_host.FormalSettings?.History.MaxSizeBytes ?? 1048576) +
+            Localize.F("Text0169", policy.MaxFileSizeBytes, policy.MaxTotalSizeBytes, policy.RetentionDays);
     }
 
     private async Task<SessionLaunchRequest?> ConfirmElevatedLaunchAsync(SessionLaunchRequest request)
     {
         var approved = await Task.Run(() => LaunchPathInspector.Resolve(request));
-        var text = new StringBuilder("将通过 Windows UAC 创建一个嵌入式管理员会话。关闭标签或窗口会结束该会话及其进程树。\n\n")
-            .Append("程序：").Append(approved.ExecutablePath).Append("\n目录：").Append(approved.WorkingDirectory)
-            .Append("\n模式：管理员 Shell\n参数（逐项）：\n");
+        var text = new StringBuilder(Localize.T("Text0170"))
+            .Append(Localize.T("Text0171")).Append(approved.ExecutablePath).Append(Localize.T("Text0172")).Append(approved.WorkingDirectory)
+            .Append(Localize.T("Text0173"));
         foreach (var argument in approved.Arguments) text.Append(System.Text.Json.JsonSerializer.Serialize(argument)).Append('\n');
-        text.Append("\n环境覆盖：\n");
-        text.Append(request.Environment.Count).Append(" 项（值不显示；可能包含凭据）\n");
-        text.Append("\n启动后输入：").Append(System.Text.Json.JsonSerializer.Serialize(approved.PostLaunchInput));
-        if (text.Length > 12000) throw new ArgumentException("管理员启动详情过长，无法完整展示；请缩短参数或启动后输入。");
-        return MessageBox.Show(this, text.ToString(), "确认本次管理员启动", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes ? approved : null;
+        text.Append(Localize.T("Text0174"));
+        text.Append(request.Environment.Count).Append(Localize.T("Text0175"));
+        text.Append(Localize.T("Text0176")).Append(System.Text.Json.JsonSerializer.Serialize(approved.PostLaunchInput));
+        if (text.Length > 12000) throw new ArgumentException(Localize.T("Text0177"));
+        return MessageBox.Show(this, text.ToString(), Localize.T("Text0178"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes ? approved : null;
     }
 
     private async void OpenTerminalLink(TerminalLink link)
     {
-        var action = link.IsWeb ? "用默认浏览器打开" : "在资源管理器中打开目录或定位文件";
-        if (MessageBox.Show(this, $"显示文本：{link.DisplayText}\n\n完整目标：\n{link.Target}\n\n{action}？", "确认链接目标", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        var action = link.IsWeb ? Localize.T("Text0179") : Localize.T("Text0180");
+        if (MessageBox.Show(this, Localize.F("Text0181", link.DisplayText, link.Target, action), Localize.T("Text0182"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         try
         {
             if (link.IsWeb) await Task.Run(() => Process.Start(new ProcessStartInfo(link.Target) { UseShellExecute = true }));
@@ -136,14 +136,14 @@ public partial class MainWindow
             }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or System.ComponentModel.Win32Exception)
-        { StatusText.Text = $"无法打开目标：{link.Target} · {error.Message}"; }
+        { StatusText.Text = Localize.F("Text0183", link.Target, error.Message); }
     }
 
     private async void HistoryEnabled_Click(object sender, RoutedEventArgs e)
     {
         if (_recordingBusy) return;
         var enable = HistoryEnabledInput.IsChecked == true;
-        if (enable && MessageBox.Show(this, "记录本次运行中具有可靠开始/结束事件的命令文本、目录与结果。可能含秘密；不自动脱敏，不导入 Shell 历史。重启后关闭。是否开启？", "开启应用历史", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        if (enable && MessageBox.Show(this, Localize.T("Text0184"), Localize.T("Text0185"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
         { UpdateShellDisplay(); return; }
         await _host.CommandHistory.SetEnabledAsync(enable, _host.FormalSettings?.History ?? new());
         UpdateShellDisplay();
@@ -154,7 +154,7 @@ public partial class MainWindow
         if (session?.State != SessionState.Running || _recordingBusy) return;
         var enable = !_host.Transcripts.GetStatus(session.Id).Recording;
         var policy = _host.FormalSettings?.Transcription ?? new();
-        if (enable && MessageBox.Show(this, $"仅记录此会话开启后的文本输出，不记录按键。程序回显可能含秘密；不保证还原光标覆盖与备用屏动态画面。\n每会话 {policy.MaxFileSizeBytes:N0} 字节、总量 {policy.MaxTotalSizeBytes:N0} 字节、{policy.RetentionDays} 天；达到上限轮换并提示截断。写盘失败或队列满时停止，终端继续运行。是否开始？", "开启当前会话转录", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        if (enable && MessageBox.Show(this, Localize.F("Text0186", policy.MaxFileSizeBytes, policy.MaxTotalSizeBytes, policy.RetentionDays), Localize.T("Text0187"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
         { UpdateShellDisplay(); return; }
         _recordingBusy = true;
         try
@@ -162,30 +162,30 @@ public partial class MainWindow
             if (enable) await _host.Transcripts.StartAsync(session.Id, policy);
             else await _host.Transcripts.StopAsync(session.Id);
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { StatusText.Text = "转录未开启：" + error.Message; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { StatusText.Text = Localize.T("Text0188") + error.Message; }
         finally { _recordingBusy = false; UpdateShellDisplay(); }
     }
     private async void ClearHistory_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, "只清除 ArkTerminal 应用命令历史；不会清除 PowerShell、CMD 或 Bash 自身历史。继续？", "清除应用历史", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        try { await _host.CommandHistory.ClearAsync(); StatusText.Text = "应用命令历史已清除。"; }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { StatusText.Text = "清除历史失败：" + error.Message; }
+        if (MessageBox.Show(this, Localize.T("Text0189"), Localize.T("Text0190"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        try { await _host.CommandHistory.ClearAsync(); StatusText.Text = Localize.T("Text0191"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { StatusText.Text = Localize.T("Text0192") + error.Message; }
     }
     private async void ClearTranscripts_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, "停止所有转录，并删除 ArkTerminal 拥有的输出转录文件；不会删除配置、Shell 历史或其他文件。继续？", "清除应用转录", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        try { await _host.Transcripts.ClearAsync(); StatusText.Text = "应用转录已停止并清除。"; }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { StatusText.Text = "清除转录失败：" + error.Message; }
+        if (MessageBox.Show(this, Localize.T("Text0193"), Localize.T("Text0194"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try { await _host.Transcripts.ClearAsync(); StatusText.Text = Localize.T("Text0195"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { StatusText.Text = Localize.T("Text0196") + error.Message; }
     }
     private void ViewHistory_Click(object sender, RoutedEventArgs e)
     {
         var query = new TextBox { Margin = new(0, 0, 0, 8) };
         var results = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        var search = new Button { Content = "搜索已保存历史", Margin = new(0, 0, 0, 8) };
+        var search = new Button { Content = Localize.T("Text0197"), Margin = new(0, 0, 0, 8) };
         var panel = new DockPanel { Margin = new(16) };
         DockPanel.SetDock(query, Dock.Top); DockPanel.SetDock(search, Dock.Top);
         panel.Children.Add(query); panel.Children.Add(search); panel.Children.Add(results);
-        var window = new Window { Owner = this, Title = "ArkTerminal 应用历史 · 最多显示 100 条匹配", Width = 780, Height = 580, Content = panel };
+        var window = new Window { Owner = this, Title = Localize.T("Text0198"), Width = 780, Height = 580, Content = panel };
         window.SetResourceReference(BackgroundProperty, "Theme.WindowBackground");
         window.SetResourceReference(ForegroundProperty, "Theme.PrimaryText");
         async Task Load()
@@ -194,9 +194,9 @@ public partial class MainWindow
             try
             {
                 var entries = await _host.CommandHistory.ReadAsync(query.Text);
-                results.Text = string.Join("\n\n", entries.Take(100).Select(item => $"{item.TimeUtc.ToLocalTime():g} · {item.Shell} · 退出码 {item.ExitCode?.ToString() ?? "未知"} · {item.DurationMilliseconds / 1000:0.###} s\n{item.WorkingDirectory}\n{item.Command}"));
+                results.Text = string.Join("\n\n", entries.Take(100).Select(item => Localize.F("Text0199", Localize.ToConfiguredTime(item.TimeUtc), item.Shell, item.ExitCode?.ToString() ?? Localize.T("Text0056"), item.DurationMilliseconds / 1000, item.WorkingDirectory, item.Command)));
             }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { results.Text = "读取历史失败：" + error.Message; }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { results.Text = Localize.T("Text0200") + error.Message; }
             finally { search.IsEnabled = true; }
         }
         search.Click += async (_, _) => await Load();

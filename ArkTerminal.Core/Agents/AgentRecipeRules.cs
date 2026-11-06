@@ -15,36 +15,36 @@ public static class AgentRecipeRules
         if (!Enum.IsDefined(recipe.ShellBackend) || recipe.Arguments is null || recipe.Arguments.Count > AgentLimits.MaxRecipeArguments ||
             recipe.Arguments.Any(value => value is null || value.Length > AgentLimits.MaxArgumentCharacters || value.Any(char.IsControl)) ||
             recipe.Model?.Length > 128 || recipe.PermissionMode?.Length > 64)
-            throw new ArgumentException("Agent 后端或参数超出限制。每项最多 2048 字符、最多 64 项，不能含控制字符。");
+            throw new ArgumentException(Localize.T("Text0578"));
         var values = recipe.Arguments.Concat([recipe.Model ?? "", recipe.PermissionMode ?? ""]);
-        if (values.Any(ContainsSecret)) throw new ArgumentException("配方不保存令牌、密码或 API key。请由 CLI 自身认证或继承进程环境。");
+        if (values.Any(ContainsSecret)) throw new ArgumentException(Localize.T("Text0579"));
         if (!string.IsNullOrEmpty(recipe.Model) && !Regex.IsMatch(recipe.Model, @"\A[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}\z"))
-            throw new ArgumentException("模型须为模型标识符，不能包含脚本、凭据或空白。");
+            throw new ArgumentException(Localize.T("Text0580"));
     }
 
     public static IReadOnlyList<string> BuildArguments(AgentDefinition definition, AgentLaunchRecipe recipe, string workingDirectory)
     {
         ValidateBasic(recipe);
-        if (definition.Id != recipe.AgentId) throw new ArgumentException("配方与适配器 ID 不匹配。");
-        if (!definition.Capabilities.InteractiveInput) throw new ArgumentException(definition.UnsupportedReason ?? "此适配器不支持交互终端。");
+        if (definition.Id != recipe.AgentId) throw new ArgumentException(Localize.T("Text0581"));
+        if (!definition.Capabilities.InteractiveInput) throw new ArgumentException(definition.UnsupportedReason ?? Localize.T("Text0582"));
         var result = new List<string>();
         string Expand(string argument) => argument switch
         {
             "{{workingDirectory}}" => workingDirectory,
             "{{model}}" when !string.IsNullOrEmpty(recipe.Model) => recipe.Model,
-            "{{model}}" => throw new ArgumentException("此模板要求填写模型。"),
+            "{{model}}" => throw new ArgumentException(Localize.T("Text0583")),
             _ => argument
         };
         result.AddRange(definition.LaunchTemplate.Select(Expand));
         if (!string.IsNullOrEmpty(recipe.Model))
         {
-            if (definition.Fields.Model.Count == 0) throw new ArgumentException("此适配器没有已核实的模型参数。");
+            if (definition.Fields.Model.Count == 0) throw new ArgumentException(Localize.T("Text0584"));
             result.AddRange(definition.Fields.Model.Select(Expand));
         }
         if (!string.IsNullOrEmpty(recipe.PermissionMode))
         {
             if (!definition.Fields.PermissionModes.TryGetValue(recipe.PermissionMode, out var template))
-                throw new ArgumentException("权限模式未在适配器中声明；请留空使用 CLI 原有设置，或选择已列出的模式。");
+                throw new ArgumentException(Localize.T("Text0585"));
             result.AddRange(template.Select(Expand));
         }
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -52,18 +52,18 @@ public static class AgentRecipeRules
         {
             var argument = recipe.Arguments[index];
             var option = definition.Fields.Arguments.FirstOrDefault(item => item.Flag == argument)
-                ?? throw new ArgumentException("附加参数不在此适配器白名单中；不能保存未知开关或初始任务正文。");
-            if (!seen.Add(argument) && !option.Repeatable) throw new ArgumentException("附加参数重复。");
+                ?? throw new ArgumentException(Localize.T("Text0586"));
+            if (!seen.Add(argument) && !option.Repeatable) throw new ArgumentException(Localize.T("Text0587"));
             result.Add(argument);
             if (!option.TakesValue) continue;
-            if (++index >= recipe.Arguments.Count) throw new ArgumentException("附加参数缺少值。");
+            if (++index >= recipe.Arguments.Count) throw new ArgumentException(Localize.T("Text0588"));
             var value = recipe.Arguments[index];
             if (option.AllowedValues.Count > 0 && !option.AllowedValues.Contains(value, StringComparer.Ordinal))
-                throw new ArgumentException("附加参数值不在白名单中。");
+                throw new ArgumentException(Localize.T("Text0589"));
             result.Add(value);
         }
         if (result.Count > AgentLimits.MaxRecipeArguments || result.Sum(value => value.Length) > AgentLimits.MaxExpandedCharacters)
-            throw new ArgumentException("展开后的启动参数超过 64 项或 8192 字符。");
+            throw new ArgumentException(Localize.T("Text0590"));
         return result;
     }
 

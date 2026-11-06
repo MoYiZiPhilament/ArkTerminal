@@ -24,7 +24,7 @@ public sealed class TerminalSessionOptions
             MaxCsiParameters <= 0 || MaxOscLength < 64 || MaxScrollbackLines < 0 || MaxScrollbackBytes <= 0 ||
             ProcessExitGrace <= TimeSpan.Zero || OutputDrainGrace <= TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(nameof(TerminalSessionOptions), "终端会话限制必须为有效正数。");
+            throw new ArgumentOutOfRangeException(nameof(TerminalSessionOptions), Localize.T("Text0511"));
         }
     }
 }

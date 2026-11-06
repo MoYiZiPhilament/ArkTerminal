@@ -57,7 +57,7 @@ public sealed partial class AppHost : IAsyncDisposable
         var dataPaths = await AppDataPathsFactory.CreateAsync(arguments, packagingContext, _lifetime.Token);
         if (!dataPaths.Success)
         {
-            throw new AppDataInitializationException(dataPaths.ErrorPath, dataPaths.ErrorMessage ?? "数据目录初始化失败。");
+            throw new AppDataInitializationException(dataPaths.ErrorPath, dataPaths.ErrorMessage ?? Localize.T("Text0007"));
         }
 
         Paths = dataPaths.Paths!;
@@ -79,7 +79,7 @@ public sealed partial class AppHost : IAsyncDisposable
         }
         else
         {
-            StartupIssues.Add(recentProjects.Error ?? "最近项目加载失败。");
+            StartupIssues.Add(recentProjects.Error ?? Localize.T("Text0008"));
         }
 
         var profiles = await _profileService.LoadAsync(_lifetime.Token);
@@ -91,7 +91,7 @@ public sealed partial class AppHost : IAsyncDisposable
         }
         else
         {
-            StartupIssues.Add(profiles.Error ?? "Profile 加载失败。");
+            StartupIssues.Add(profiles.Error ?? Localize.T("Text0009"));
             Diagnostics.Record(DiagnosticComponent.Profiles, DiagnosticEventKind.ReadFailed, (int)profiles.Status);
         }
 
@@ -105,14 +105,14 @@ public sealed partial class AppHost : IAsyncDisposable
         }
         else
         {
-            StartupIssues.Add(settings.Error ?? "设置加载失败。");
+            StartupIssues.Add(settings.Error ?? Localize.T("Text0010"));
             Diagnostics.Record(DiagnosticComponent.Configuration, DiagnosticEventKind.ReadFailed, (int)settings.Status);
         }
 
         var recovery = await _recoveryService.LoadForStartupAsync(_lifetime.Token);
         if (recovery.MarkerError is not null)
         {
-            StartupIssues.Add(recovery.MarkerError.Error ?? "异常退出标记写入失败。");
+            StartupIssues.Add(recovery.MarkerError.Error ?? Localize.T("Text0011"));
         }
         if (!recovery.AbnormalExit)
         {
@@ -126,7 +126,7 @@ public sealed partial class AppHost : IAsyncDisposable
         }
         else if (recovery.State is not null && recovery.State.Status != DocumentLoadStatus.NotFound)
         {
-            StartupIssues.Add(recovery.State.Error ?? "恢复布局加载失败。");
+            StartupIssues.Add(recovery.State.Error ?? Localize.T("Text0012"));
         }
 
         if (recovery.Draft?.Success == true && profileIds is not null)
@@ -148,7 +148,7 @@ public sealed partial class AppHost : IAsyncDisposable
         }
         else if (recovery.Draft is not null && recovery.Draft.Status != DocumentLoadStatus.NotFound)
         {
-            StartupIssues.Add(recovery.Draft.Error ?? "设置草稿加载失败。");
+            StartupIssues.Add(recovery.Draft.Error ?? Localize.T("Text0013"));
         }
 
         if (recovery.ProfilesDraft?.Success == true)
@@ -162,7 +162,7 @@ public sealed partial class AppHost : IAsyncDisposable
             else await _profilesDraftService.DeleteAsync(_lifetime.Token);
         }
         else if (recovery.ProfilesDraft is not null && recovery.ProfilesDraft.Status != DocumentLoadStatus.NotFound)
-            StartupIssues.Add(recovery.ProfilesDraft.Error ?? "Profile 草稿加载失败。");
+            StartupIssues.Add(recovery.ProfilesDraft.Error ?? Localize.T("Text0014"));
         RecoveryAvailable = _recoveredDraft is not null || _recoveredProfilesDraft is not null || Recovery?.Tabs.Count > 0;
         StartRecordingMaintenance();
     }
@@ -171,7 +171,7 @@ public sealed partial class AppHost : IAsyncDisposable
     {
         if (!CanEdit)
         {
-            return Failure("配置未成功加载，不能创建草稿。");
+            return Failure(Localize.T("Text0015"));
         }
         if (Draft is not null)
         {
@@ -192,7 +192,7 @@ public sealed partial class AppHost : IAsyncDisposable
     {
         if (Draft is null)
         {
-            throw new InvalidOperationException("尚未开始草稿编辑。");
+            throw new InvalidOperationException(Localize.T("Text0016"));
         }
         Draft.Settings = settings;
         Draft.CommitRequested = false;
@@ -202,7 +202,7 @@ public sealed partial class AppHost : IAsyncDisposable
     {
         if (Draft is null)
         {
-            return Failure("没有待保存草稿。");
+            return Failure(Localize.T("Text0017"));
         }
 
         await _draftGate.WaitAsync();
@@ -210,7 +210,7 @@ public sealed partial class AppHost : IAsyncDisposable
         {
             if (Draft is null || _lifetime.IsCancellationRequested)
             {
-                return Failure("草稿编辑已结束，取消未完成的自动保存。");
+                return Failure(Localize.T("Text0018"));
             }
             var saved = await _draftService.SaveAsync(Draft, DraftRevision, _lifetime.Token);
             if (!saved.Success)
@@ -230,7 +230,7 @@ public sealed partial class AppHost : IAsyncDisposable
     {
         if (Draft is null || Catalog is null)
         {
-            return Failure("没有可提交的设置草稿。");
+            return Failure(Localize.T("Text0019"));
         }
 
         await _draftGate.WaitAsync();
@@ -256,7 +256,7 @@ public sealed partial class AppHost : IAsyncDisposable
             DraftRevision = string.Empty;
             _recoveredDraft = null;
             return new DocumentSaveResult { Status = DocumentSaveStatus.Success, Revision = saved.Revision,
-                Warning = cleanup.Success ? null : "正式设置已保存；恢复草稿清理失败，可重试清理。" };
+                Warning = cleanup.Success ? null : Localize.T("Text0020") };
         }
         finally
         {
@@ -404,7 +404,7 @@ public sealed partial class AppHost : IAsyncDisposable
         }
         if (Draft is not null || ProfilesDraft is not null)
         {
-            return Failure("仍有未保存草稿，不能执行正常关闭清理。");
+            return Failure(Localize.T("Text0021"));
         }
 
         await _draftGate.WaitAsync();

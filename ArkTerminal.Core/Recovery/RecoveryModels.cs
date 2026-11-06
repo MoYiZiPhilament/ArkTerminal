@@ -52,7 +52,7 @@ public static class RecoveryValidator
     public static ValidationResult ValidateProfilesDraft(ProfilesDraft? draft)
     {
         if (draft is null || draft.SchemaVersion != ConfigurationDefaults.CurrentSchemaVersion || string.IsNullOrWhiteSpace(draft.DraftId) || draft.EditorValues is null)
-            return ValidationResult.FromIssues([new ValidationIssue("draft", "Profile 草稿无效。")]);
+            return ValidationResult.FromIssues([new ValidationIssue("draft", Localize.T("Text0684"))]);
         return ConfigurationValidator.ValidateProfiles(draft.Catalog);
     }
 
@@ -60,17 +60,17 @@ public static class RecoveryValidator
     {
         if (draft is null)
         {
-            return ValidationResult.FromIssues([new ValidationIssue("draft", "草稿不能为空。")]);
+            return ValidationResult.FromIssues([new ValidationIssue("draft", Localize.T("Text0685"))]);
         }
 
         var issues = new List<ValidationIssue>();
         if (draft.SchemaVersion != ConfigurationDefaults.CurrentSchemaVersion)
         {
-            issues.Add(new("schemaVersion", "草稿版本不受支持。"));
+            issues.Add(new("schemaVersion", Localize.T("Text0686")));
         }
         if (string.IsNullOrWhiteSpace(draft.DraftId))
         {
-            issues.Add(new("draftId", "草稿 ID 不能为空。"));
+            issues.Add(new("draftId", Localize.T("Text0687")));
         }
         var settings = ConfigurationValidator.ValidateSettings(draft.Settings);
         issues.AddRange(settings.Issues);
@@ -81,17 +81,17 @@ public static class RecoveryValidator
     {
         if (state is null)
         {
-            return ValidationResult.FromIssues([new ValidationIssue("recovery", "恢复状态不能为空。")]);
+            return ValidationResult.FromIssues([new ValidationIssue("recovery", Localize.T("Text0688"))]);
         }
 
         var issues = new List<ValidationIssue>();
         if (state.SchemaVersion != ConfigurationDefaults.CurrentSchemaVersion)
         {
-            issues.Add(new("schemaVersion", "恢复状态版本不受支持。"));
+            issues.Add(new("schemaVersion", Localize.T("Text0689")));
         }
         if (state.Tabs is null || state.Tabs.Count > 100)
         {
-            issues.Add(new("tabs", "恢复标签不能为空且最多 100 项。"));
+            issues.Add(new("tabs", Localize.T("Text0690")));
             return ValidationResult.FromIssues(issues);
         }
 
@@ -104,7 +104,7 @@ public static class RecoveryValidator
                 string.IsNullOrWhiteSpace(tab.ProfileId) || string.IsNullOrWhiteSpace(tab.WorkingDirectory) ||
                 tab.WorkingDirectory.Contains('\0') || !orders.Add(tab.Order))
             {
-                issues.Add(new($"tabs[{index}]", "标签 ID/Profile 引用不能为空，ID 与顺序不能重复。"));
+                issues.Add(new($"tabs[{index}]", Localize.T("Text0691")));
             }
         }
         return ValidationResult.FromIssues(issues);

@@ -1,4 +1,4 @@
-﻿{
+{
   "schemaVersion": 1,
   "appearance": {
     "uiFontFamily": "Segoe UI",
@@ -31,6 +31,10 @@
     }
   },
   "defaultProfileId": "cmd",
+  "regional": {
+    "language": "en-US",
+    "timeZoneId": "China Standard Time"
+  },
   "history": {
     "enabled": false,
     "maxEntries": 1000,

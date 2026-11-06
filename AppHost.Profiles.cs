@@ -16,13 +16,13 @@ public sealed partial class AppHost
 
     public void EnsureSettingsDraft()
     {
-        if (!CanEdit) throw new InvalidOperationException("配置未成功加载，不能编辑。");
+        if (!CanEdit) throw new InvalidOperationException(Localize.T("Text0022"));
         Draft ??= new() { DraftId = Guid.NewGuid().ToString("N"), BaseRevision = SettingsRevision, Settings = FormalSettings!.DeepClone() };
     }
 
     public void EnsureProfilesDraft()
     {
-        if (!CanEdit) throw new InvalidOperationException("配置未成功加载，不能编辑。");
+        if (!CanEdit) throw new InvalidOperationException(Localize.T("Text0022"));
         ProfilesDraft ??= new() { DraftId = Guid.NewGuid().ToString("N"), BaseRevision = ProfilesRevision, Catalog = Catalog!.DeepClone() };
         ProfilesDraft.CommitRequested = false;
     }
@@ -32,7 +32,7 @@ public sealed partial class AppHost
         await _draftGate.WaitAsync();
         try
         {
-            if (ProfilesDraft is null) return Failure("没有 Profile 草稿。");
+            if (ProfilesDraft is null) return Failure(Localize.T("Text0023"));
             if (ValidateAgentProfiles() is { } agentError) return Failure(agentError);
             var saved = await _profilesDraftService.SaveAsync(ProfilesDraft, ProfilesDraftRevision, _lifetime.Token);
             if (!saved.Success) return saved;
@@ -56,12 +56,12 @@ public sealed partial class AppHost
         await _draftGate.WaitAsync();
         try
         {
-            if (ProfilesDraft is null) return Failure("没有 Profile 草稿。");
+            if (ProfilesDraft is null) return Failure(Localize.T("Text0023"));
             if (ValidateAgentProfiles() is { } agentError) return Failure(agentError);
             var ids = ProfilesDraft.Catalog.Profiles.Select(profile => profile.Id).ToArray();
             if (new[] { FormalSettings?.DefaultProfileId, Draft?.Settings.DefaultProfileId }
                 .Any(id => id is not null && !ids.Contains(id, StringComparer.OrdinalIgnoreCase)))
-                return Failure("请先更换并保存默认 Profile；目录尚未保存。");
+                return Failure(Localize.T("Text0024"));
             ProfilesDraft.CommitRequested = true;
             var committing = ProfilesDraft.Catalog.DeepClone();
             var intent = await _profilesDraftService.SaveAsync(ProfilesDraft, ProfilesDraftRevision, _lifetime.Token);
@@ -76,7 +76,7 @@ public sealed partial class AppHost
             ProfilesDraftRevision = string.Empty;
             _recoveredProfilesDraft = null;
             return new() { Status = DocumentSaveStatus.Success, Revision = saved.Revision,
-                Warning = cleanup.Success ? null : "Profile 已保存；恢复草稿清理失败，可重试清理。" };
+                Warning = cleanup.Success ? null : Localize.T("Text0025") };
         }
         finally { _draftGate.Release(); }
     }
@@ -90,7 +90,7 @@ public sealed partial class AppHost
 
     public async Task<DocumentSaveResult> RetryDraftCleanupAsync()
     {
-        if (Draft is not null || ProfilesDraft is not null) return Failure("请先处理正在编辑的草稿。");
+        if (Draft is not null || ProfilesDraft is not null) return Failure(Localize.T("Text0026"));
         var settings = await CancelDraftAsync();
         return settings.Success ? await CancelProfilesDraftAsync() : settings;
     }
@@ -123,9 +123,9 @@ public sealed partial class AppHost
     public async Task<DocumentSaveResult> ReloadFormalAsync()
     {
         var profiles = await _profileService.LoadAsync(_lifetime.Token);
-        if (!profiles.Success) return Failure(profiles.Error ?? "Profile 重载失败。");
+        if (!profiles.Success) return Failure(profiles.Error ?? Localize.T("Text0027"));
         var settings = await _settingsService.LoadAsync(profiles.Value!.Profiles.Select(profile => profile.Id).ToArray(), _lifetime.Token);
-        if (!settings.Success) return Failure(settings.Error ?? "设置重载失败。");
+        if (!settings.Success) return Failure(settings.Error ?? Localize.T("Text0028"));
         Catalog = profiles.Value;
         ProfilesRevision = profiles.Revision!;
         FormalSettings = settings.Value;

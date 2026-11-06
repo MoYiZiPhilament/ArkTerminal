@@ -368,7 +368,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             Detach();
             var screen = new Terminal.Screen.TerminalScreen(80, 5, 0);
             var decoder = new Terminal.Decoding.TerminalStreamDecoder(screen, new());
-            var bytes = System.Text.Encoding.UTF8.GetBytes("ArkTerminal  Aa 0123456789\r\n中文 · e\u0301 · 👩‍💻 · 🇨🇳\r\n== != => ->  fi fl  字簇与固定列网格\r\n字体预览不会启动 Shell 或执行文本。\r\n");
+            var bytes = System.Text.Encoding.UTF8.GetBytes(Localize.T("Text0410"));
             decoder.Write(bytes, bytes.Length);
             decoder.Complete();
             _preview = screen.GetSnapshot(Guid.Empty);

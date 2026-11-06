@@ -49,7 +49,7 @@ public sealed class ProfileService : IProfileService
     {
         if (catalog.Profiles.Any(existing => existing.Id.Equals(profile.Id, StringComparison.OrdinalIgnoreCase)))
         {
-            return ValidationResult.FromIssues([new ValidationIssue("id", "Profile ID 已存在。")]);
+            return ValidationResult.FromIssues([new ValidationIssue("id", Localize.T("Text0655"))]);
         }
         catalog.Profiles.Add(profile);
         return ConfigurationValidator.ValidateProfiles(catalog);
@@ -60,7 +60,7 @@ public sealed class ProfileService : IProfileService
         var index = catalog.Profiles.FindIndex(existing => existing.Id.Equals(profile.Id, StringComparison.OrdinalIgnoreCase));
         if (index < 0)
         {
-            return ValidationResult.FromIssues([new ValidationIssue("id", "Profile 不存在。")]);
+            return ValidationResult.FromIssues([new ValidationIssue("id", Localize.T("Text0656"))]);
         }
         catalog.Profiles[index] = profile;
         return ConfigurationValidator.ValidateProfiles(catalog);
@@ -70,7 +70,7 @@ public sealed class ProfileService : IProfileService
     {
         var removed = catalog.Profiles.RemoveAll(profile => profile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
         return removed == 0
-            ? ValidationResult.FromIssues([new ValidationIssue("id", "Profile 不存在。")])
+            ? ValidationResult.FromIssues([new ValidationIssue("id", Localize.T("Text0656"))])
             : ConfigurationValidator.ValidateProfiles(catalog);
     }
 }

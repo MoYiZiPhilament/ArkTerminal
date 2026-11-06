@@ -33,7 +33,7 @@ public sealed class WindowVisualCoordinator : IDisposable
     private AppearanceSettings _appearance = new();
     private HwndSource? _source;
     private CancellationTokenSource? _backgroundCancellation;
-    private WindowMaterialResult _materialResult = new(WindowMaterialMode.Off, false, "窗口材质尚未应用。", true);
+    private WindowMaterialResult _materialResult = new(WindowMaterialMode.Off, false, Localize.T("Text0448"), true);
     private string _backgroundKey = string.Empty;
     private string _paletteKey = string.Empty;
     private string _materialKey = string.Empty;
@@ -85,7 +85,7 @@ public sealed class WindowVisualCoordinator : IDisposable
     internal bool UsesNativeWindowCorners => _material.UsesNativeCorners;
     public bool AnimationsEnabled => !PerformanceModeEnabled && SystemParameters.ClientAreaAnimation;
     public string CapabilityText => $"{_material.Capabilities.Summary}。{_materialResult.Status}" +
-        (string.IsNullOrEmpty(_appearance.Visual.BackgroundImagePath) ? string.Empty : " 背景图另含固定可读性遮罩（浅色 65% / 深色 45%）。");
+        (string.IsNullOrEmpty(_appearance.Visual.BackgroundImagePath) ? string.Empty : Localize.T("Text0449"));
     public VisualDiagnosticsSnapshot Diagnostics => new(
         PerformanceModeEnabled,
         _materialResult.AppliedMaterial,
@@ -237,7 +237,7 @@ public sealed class WindowVisualCoordinator : IDisposable
         }
         else
         {
-            _materialResult = new(WindowMaterialMode.Off, false, "窗口初始化后将探测并应用系统材质。", true);
+            _materialResult = new(WindowMaterialMode.Off, false, Localize.T("Text0450"), true);
         }
         ApplyWindowBackground(transparentWindow);
         ApplyTerminalStyle();

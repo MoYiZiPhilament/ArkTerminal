@@ -51,7 +51,7 @@ public sealed class TerminalStreamDecoder
                 out _);
             if (bytesUsed == 0 && charactersUsed == 0)
             {
-                throw new InvalidOperationException("UTF-8 解码器未能推进输入。");
+                throw new InvalidOperationException(Localize.T("Text0481"));
             }
             offset += bytesUsed;
             if (charactersUsed > 0)

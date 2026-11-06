@@ -1,8 +1,8 @@
 # ArkTerminal 本地分发与手动维护
 
-版本 `0.1.2a`，包版本 `0.1.2`。当前为主要版本，未通过最终发行验收。
-显示版本和发行标签使用 `0.1.2a`，NuGet / .NET 构建版本使用兼容的
-`0.1.2-a`，项目数字版本为 `0.1.2`。
+版本 `1.2.2a`，包版本 `1.2.2`。当前为主要版本，未通过最终发行验收。
+显示版本和发行标签使用 `1.2.2a`，NuGet / .NET 构建版本使用兼容的
+`1.2.2-a`，项目数字版本为 `1.2.2`。
 
 版本规则：数字部分为 `x.x.x`；`a` 为主要版本，`b` 为测试版本（替代原 `preview`），`c` 为特殊处理版本。产品显示与包文件名保留字母后缀，项目数字版本写三段。仅 MSIX 系统清单使用 Windows 强制要求的四段数字；二进制的固定宽度底层元数据由编译器规范化。
 
@@ -19,7 +19,7 @@ dotnet build ArkTerminal.sln -c Release -p:RestoreLockedMode=true
 pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.28000.0\x64' -DevelopmentSign
 ```
 
-默认输出 `bin/Packages/0.1.2a/`；已有同名产物时停止，可另传
+默认输出 `bin/Packages/1.2.2a/`；已有同名产物时停止，可另传
 `-OutputDirectory`。脚本从干净暂存目录 publish，再生成 ZIP、MSIX、
 `distribution.json` 与 `SHA256SUMS.txt`，不包含本机 `data`、配置、PDB 之外的
 临时探针或签名私钥。MCP 位于 `Mcp` 子目录，提权辅助器使用同一
@@ -35,7 +35,7 @@ Windows SDK 提供工具，也可从微软官方 NuGet 包解压后把 `bin/10.0
 
 ## MSI 安装包
 
-同一 `0.1.2a` Release 另提供 `ArkTerminal-0.1.2a-win-x64.msi`
+同一 `1.2.2a` Release 另提供 `ArkTerminal-1.2.2a-win-x64.msi`
 和独立的 `SHA256SUMS-msi.txt`。MSI 直接封装同版本
 便携 ZIP 的程序文件，不重新编译应用；去掉 `portable.flag` 和空 `data`，
 补充 MSI 元数据、维护说明及安装界面组件的许可 / 对应源码。
@@ -47,8 +47,8 @@ Windows SDK 提供工具，也可从微软官方 NuGet 包解压后把 `bin/10.0
 升级、修复或卸载前先退出应用并备份数据；卸载只清理 MSI 管理的程序、快捷方式
 和安装登记，不删除 APPDATA 下的配置 / 快照 / 记录。
 
-产品名称和文件名使用完整 `0.1.2a`，应用仍显示该版本。
-Windows Installer 的 `ProductVersion` 按其三段数字规则使用 `0.1.2`；
+产品名称和文件名使用完整 `1.2.2a`，应用仍显示该版本。
+Windows Installer 的 `ProductVersion` 按其三段数字规则使用 `1.2.2`；
 后续 MSI 自动大版本替换要求前三段至少一段增加，同数字版本不视作升级。
 MSI 没有 Authenticode 签名，不使用 MSIX 的开发证书，也不导入证书或安装运行时。
 当前验证覆盖 ICE 校验、行政解包、逐文件比对及解包后的程序启动；
@@ -64,7 +64,7 @@ pwsh -File Packaging/Build-Msi.ps1
 ```
 
 在仓库根目录执行上述命令，先生成或放入同版本便携 ZIP。已有同名 MSI 时脚本停止。
-默认输出仍是 `bin/Packages/0.1.2a/`，可用 `-PortableZip` 指定输入 ZIP，
+默认输出仍是 `bin/Packages/1.2.2a/`，可用 `-PortableZip` 指定输入 ZIP，
 `-WixPath` 指定同版本工具。脚本执行标准 ICE 校验，只排除纯当前用户布局的
 预期 ICE91 提示，不排除其他校验项。安装界面包含未修改的 WiX UI 打印许可辅助器，
 其 MS-RL 许可、对应提交的完整源码归档及散列随 MSI 携带，见

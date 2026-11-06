@@ -12,7 +12,7 @@ public sealed class TerminalContextCollector(Func<Guid, CancellationToken, Task<
     public async Task<ContextSnapshot> CollectAsync(ContextCollectionRequest request, CancellationToken cancellationToken)
     {
         var current = await source(request.SessionId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException("来源会话已关闭或不存在，请选择当前会话重新采集。");
+            ?? throw new InvalidOperationException(Localize.T("Text0418"));
         var selection = request.PreferSelection || request.SelectionOnly ? current.Selection : null;
         return await Task.Run(() =>
         {
@@ -20,7 +20,7 @@ public sealed class TerminalContextCollector(Func<Guid, CancellationToken, Task<
             var raw = request.SelectionOnly && selection is null ? new TerminalTextSlice(string.Empty, false, false, false) :
                 current.Session.CaptureBoundedText(request.MaxLines, request.MaxBytes, selection);
             if (selection is not null && !raw.Available && !request.SelectionOnly)
-                throw new InvalidOperationException("选区已失效，请重新选择或改用尾部采集。");
+                throw new InvalidOperationException(Localize.T("Text0419"));
             var body = ContextText.Prepare(raw.Text, raw.Truncated, request.MaxLines, request.MaxBytes);
             var time = DateTimeOffset.UtcNow;
             return new ContextSnapshot

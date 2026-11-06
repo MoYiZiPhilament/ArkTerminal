@@ -34,7 +34,7 @@ internal sealed class ShellIntegrationTracker
     private readonly object _sync = new();
     private string _token = string.Empty;
     private long _started;
-    private ShellStatus _status = new("未知", ShellCapabilities.None, ShellCommandState.Unknown, null, 0, null, null, null, null, "集成已关闭；状态未知。");
+    private ShellStatus _status = new(Localize.T("Text0056"), ShellCapabilities.None, ShellCommandState.Unknown, null, 0, null, null, null, null, Localize.T("Text0482"));
     internal ShellStatus Status { get { lock (_sync) return _status; } }
     internal event EventHandler<ShellIntegrationEventArgs>? Changed;
 
@@ -116,7 +116,7 @@ internal static class ShellIntegrationInjector
     {
         var name = Path.GetFileNameWithoutExtension(request.ExecutablePath).ToLowerInvariant();
         ShellInjection Disabled(string detail) => new(request, string.Empty, name, ShellCapabilities.None, detail);
-        if (request.ShellIntegration == ShellIntegrationMode.Disabled) return Disabled("集成已关闭；未注入脚本，命令状态与当前目录未知。");
+        if (request.ShellIntegration == ShellIntegrationMode.Disabled) return Disabled(Localize.T("Text0483"));
         var token = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
         var arguments = request.Arguments.ToList();
         var environment = new Dictionary<string, string>(request.Environment, StringComparer.OrdinalIgnoreCase);
@@ -126,24 +126,24 @@ internal static class ShellIntegrationInjector
         {
             if (arguments.Any(a => a.StartsWith("-c", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-f", StringComparison.OrdinalIgnoreCase) ||
                 a.StartsWith("-e", StringComparison.OrdinalIgnoreCase) || a.Equals("-NonInteractive", StringComparison.OrdinalIgnoreCase)))
-                return Disabled("非交互或自带命令的 PowerShell 启动参数：未注入，状态未知。");
+                return Disabled(Localize.T("Text0484"));
             var script = Resource("powershell.ps1").Replace("__ARK_TOKEN__", token);
             arguments.AddRange(["-NoExit", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(script))]);
             capabilities |= ShellCapabilities.CommandBoundaries | ShellCapabilities.ExitStatus | ShellCapabilities.Prompt;
-            detail = "PowerShell ReadLine / prompt 边界；成功状态可靠，简单原生命令提供退出码，其余退出码未知。PSReadLine 不可用时无命令边界。";
+            detail = Localize.T("Text0485");
         }
         else if (name == "cmd")
         {
             if (arguments.Any(a => a.StartsWith("/c", StringComparison.OrdinalIgnoreCase) || a.StartsWith("/k", StringComparison.OrdinalIgnoreCase)))
-                return Disabled("CMD 自带启动命令：未注入，状态未知。");
+                return Disabled(Localize.T("Text0486"));
             var prompt = environment.GetValueOrDefault("PROMPT") ?? Environment.GetEnvironmentVariable("PROMPT") ?? "$P$G";
             environment["PROMPT"] = "$E]633;Ark;" + token + ";cwdraw;$P$E\\" + prompt;
-            detail = "CMD 仅以 PROMPT 获取目录，标题使用原生 OSC；无可靠命令边界、退出码、等待事件、历史或耗时。";
+            detail = Localize.T("Text0487");
         }
         else if (name == "bash")
         {
             if (arguments.Any(a => a is not ("--login" or "-l" or "-i" or "--noprofile" or "--norc")))
-                return Disabled("Bash 自定义启动参数：未覆盖参数或注入，状态未知。");
+                return Disabled(Localize.T("Text0488"));
             var script = Resource("bash.bash").Replace("__ARK_TOKEN__", token)
                 .Replace("__ARK_LOGIN__", arguments.Any(a => a is "--login" or "-l") ? "1" : "0")
                 .Replace("__ARK_PROFILE__", arguments.Contains("--noprofile") ? "0" : "1")
@@ -157,9 +157,9 @@ internal static class ShellIntegrationInjector
             // The script travels in the approved command line, never through an elevation-writable rc file.
             arguments = ["--noprofile", "--norc", "-c", restore + "exec \"$BASH\" --rcfile <(printf '%s' '" + encoded + "' | base64 -d) -i"];
             capabilities |= ShellCapabilities.CommandBoundaries | ShellCapabilities.ExitStatus | ShellCapabilities.Prompt;
-            detail = "Git Bash 4.4+ PS0 / PROMPT_COMMAND；启动适配器按参数加载 login / rc 脚本，但不保留 login_shell 标志。忽略或禁用 Shell 历史时命令文本未知。";
+            detail = Localize.T("Text0489");
         }
-        else return Disabled("此可执行文件没有适配器；未注入，状态未知。");
+        else return Disabled(Localize.T("Text0490"));
         var prepared = new SessionLaunchRequest
         {
             ProfileId = request.ProfileId, WorkspaceId = request.WorkspaceId, ExecutablePath = request.ExecutablePath,

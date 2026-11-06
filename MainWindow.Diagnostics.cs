@@ -29,39 +29,39 @@ public partial class MainWindow
     private void InitializeStageSixCommands()
     {
         void Add(string id, string title, string shortcut, CommandScope scope, ShortcutGesture[] gestures, Func<Task> execute, Func<bool>? available = null)
-            => _commands.Register(new CommandDescriptor { Id = id, Title = title, Category = scope == CommandScope.Terminal ? "终端" : "工作台", Shortcut = shortcut,
+            => _commands.Register(new CommandDescriptor { Id = id, Title = title, Category = scope == CommandScope.Terminal ? Localize.T("Text0076") : Localize.T("Text0077"), Shortcut = shortcut,
                 Scope = scope, Gestures = gestures, CanExecute = available ?? (() => true), ExecuteAsync = _ => execute() });
         Task Action(Action action) { action(); return Task.CompletedTask; }
         bool TerminalAvailable() => TerminalView.IsVisible && _tabs.ActiveTab.Session is not null;
         const ModifierKeys control = ModifierKeys.Control;
         const ModifierKeys both = ModifierKeys.Control | ModifierKeys.Shift;
-        Add("workbench.new", "新建页", "Ctrl+Shift+T", CommandScope.Workbench, [new(Key.T, both)], () => Action(() => NewPage_Click(this, new())));
-        Add("workbench.settings", "打开设置", "未绑定", CommandScope.Workbench, [], () => Action(ShowSettings));
-        Add("workbench.palette", "命令面板", "可配置的全局热键", CommandScope.Workbench, [], () => Action(ShowCommandPalette));
-        Add("workbench.focus", "切换专注模式", "可配置的全局热键", CommandScope.Workbench, [], () => Action(ToggleFocusMode));
-        Add("workbench.performance", "切换性能模式", "未绑定", CommandScope.Workbench, [], () => Action(TogglePerformanceMode));
-        Add("workbench.metrics", "显示 / 隐藏性能面板", "未绑定", CommandScope.Workbench, [], () => Action(TogglePerformancePanel));
-        Add("workbench.diagnostics", "预览诊断导出", "未绑定", CommandScope.Workbench, [], PreviewDiagnosticsAsync);
-        Add("tab.next", "下一个标签", "Ctrl+Tab", CommandScope.Workbench, [new(Key.Tab, control)], () => Action(() => _tabs.Next(1)));
-        Add("tab.previous", "上一个标签", "Ctrl+Shift+Tab", CommandScope.Workbench, [new(Key.Tab, both)], () => Action(() => _tabs.Next(-1)));
-        Add("tab.close", "关闭标签", "Ctrl+Shift+W", CommandScope.Workbench, [new(Key.W, both)], () => CloseTabAsync(_tabs.ActiveTab), () => !_tabs.ActiveTab.IsNewPage);
-        Add("tab.duplicate", "重复标签（原启动快照）", "未绑定", CommandScope.Workbench, [], () => DuplicateAsync(_tabs.ActiveTab), () => _tabs.ActiveTab.Launch is not null);
-        Add("tab.restart", "重启会话（最新正式 Profile）", "未绑定", CommandScope.Workbench, [], () => RestartAsync(_tabs.ActiveTab), () => _tabs.ActiveTab.Launch is not null);
-        Add("terminal.copy", "复制有效选区", "Ctrl+Shift+C", CommandScope.Terminal, [new(Key.C, both)], TerminalView.CopySelectionAsync, TerminalAvailable);
-        Add("terminal.paste", "粘贴原文", "Ctrl+Shift+V", CommandScope.Terminal, [new(Key.V, both)], TerminalView.PasteAsync, TerminalAvailable);
-        Add("terminal.selectAll", "全选当前缓冲", "Ctrl+Shift+A", CommandScope.Terminal, [new(Key.A, both)], TerminalView.SelectAllAsync, TerminalAvailable);
-        Add("terminal.search", "搜索", "Ctrl+F", CommandScope.Terminal, [new(Key.F, control)], () => Action(TerminalView.RequestSearch), TerminalAvailable);
-        Add("terminal.interrupt", "中断（Ctrl+C 保留 Shell 语义）", "Ctrl+C", CommandScope.Terminal, [],
+        Add("workbench.new", Localize.T("Text0078"), "Ctrl+Shift+T", CommandScope.Workbench, [new(Key.T, both)], () => Action(() => NewPage_Click(this, new())));
+        Add("workbench.settings", Localize.T("Text0079"), Localize.T("Text0047"), CommandScope.Workbench, [], () => Action(ShowSettings));
+        Add("workbench.palette", Localize.T("Text0080"), Localize.T("Text0081"), CommandScope.Workbench, [], () => Action(ShowCommandPalette));
+        Add("workbench.focus", Localize.T("Text0082"), Localize.T("Text0081"), CommandScope.Workbench, [], () => Action(ToggleFocusMode));
+        Add("workbench.performance", Localize.T("Text0083"), Localize.T("Text0047"), CommandScope.Workbench, [], () => Action(TogglePerformanceMode));
+        Add("workbench.metrics", Localize.T("Text0084"), Localize.T("Text0047"), CommandScope.Workbench, [], () => Action(TogglePerformancePanel));
+        Add("workbench.diagnostics", Localize.T("Text0085"), Localize.T("Text0047"), CommandScope.Workbench, [], PreviewDiagnosticsAsync);
+        Add("tab.next", Localize.T("Text0086"), "Ctrl+Tab", CommandScope.Workbench, [new(Key.Tab, control)], () => Action(() => _tabs.Next(1)));
+        Add("tab.previous", Localize.T("Text0087"), "Ctrl+Shift+Tab", CommandScope.Workbench, [new(Key.Tab, both)], () => Action(() => _tabs.Next(-1)));
+        Add("tab.close", Localize.T("Text0088"), "Ctrl+Shift+W", CommandScope.Workbench, [new(Key.W, both)], () => CloseTabAsync(_tabs.ActiveTab), () => !_tabs.ActiveTab.IsNewPage);
+        Add("tab.duplicate", Localize.T("Text0089"), Localize.T("Text0047"), CommandScope.Workbench, [], () => DuplicateAsync(_tabs.ActiveTab), () => _tabs.ActiveTab.Launch is not null);
+        Add("tab.restart", Localize.T("Text0090"), Localize.T("Text0047"), CommandScope.Workbench, [], () => RestartAsync(_tabs.ActiveTab), () => _tabs.ActiveTab.Launch is not null);
+        Add("terminal.copy", Localize.T("Text0091"), "Ctrl+Shift+C", CommandScope.Terminal, [new(Key.C, both)], TerminalView.CopySelectionAsync, TerminalAvailable);
+        Add("terminal.paste", Localize.T("Text0092"), "Ctrl+Shift+V", CommandScope.Terminal, [new(Key.V, both)], TerminalView.PasteAsync, TerminalAvailable);
+        Add("terminal.selectAll", Localize.T("Text0093"), "Ctrl+Shift+A", CommandScope.Terminal, [new(Key.A, both)], TerminalView.SelectAllAsync, TerminalAvailable);
+        Add("terminal.search", Localize.T("Text0094"), "Ctrl+F", CommandScope.Terminal, [new(Key.F, control)], () => Action(TerminalView.RequestSearch), TerminalAvailable);
+        Add("terminal.interrupt", Localize.T("Text0095"), "Ctrl+C", CommandScope.Terminal, [],
             () => _tabs.ActiveTab.Session!.WriteInputAsync((_tabs.ActiveTab.Session.Win32InputModeEnabled ? Terminal.Input.TerminalInputEncoder.EncodeWin32ControlCharacter('C') : "\u0003").AsMemory(), CancellationToken.None), () => TerminalAvailable() && _tabs.ActiveTab.Session?.State == SessionState.Running);
-        Add("terminal.pageUp", "向上滚动一页", "Shift+PageUp", CommandScope.Terminal, [new(Key.PageUp, ModifierKeys.Shift)], () => Action(() => TerminalView.ScrollPages(1)), TerminalAvailable);
-        Add("terminal.pageDown", "向下滚动一页", "Shift+PageDown", CommandScope.Terminal, [new(Key.PageDown, ModifierKeys.Shift)], () => Action(() => TerminalView.ScrollPages(-1)), TerminalAvailable);
-        Add("terminal.top", "回滚顶部", "Ctrl+Shift+Home", CommandScope.Terminal, [new(Key.Home, both)], () => Action(TerminalView.ScrollToTop), TerminalAvailable);
-        Add("terminal.bottom", "回到最新", "Ctrl+Shift+End", CommandScope.Terminal, [new(Key.End, both)], () => Action(TerminalView.ScrollToBottom), TerminalAvailable);
-        Add("terminal.clearView", "清屏视图（不发 Shell 命令）", "Ctrl+Shift+K", CommandScope.Terminal, [new(Key.K, both)], () => Action(() => TerminalView.ClearBuffer(false)), TerminalAvailable);
-        Add("terminal.clearHistory", "清除回滚（保留可见内容）", "未绑定", CommandScope.Terminal, [], () => Action(() => TerminalView.ClearBuffer(true)), TerminalAvailable);
-        Add("terminal.zoomIn", "放大字号", "Ctrl++ / Ctrl+滚轮向上", CommandScope.Terminal, [new(Key.OemPlus, control), new(Key.OemPlus, both), new(Key.Add, control)], () => Action(() => TerminalView.Zoom(1)), TerminalAvailable);
-        Add("terminal.zoomOut", "缩小字号", "Ctrl+- / Ctrl+滚轮向下", CommandScope.Terminal, [new(Key.OemMinus, control), new(Key.Subtract, control)], () => Action(() => TerminalView.Zoom(-1)), TerminalAvailable);
-        Add("terminal.zoomReset", "恢复配置字号", "Ctrl+0", CommandScope.Terminal, [new(Key.D0, control), new(Key.NumPad0, control)], () => Action(TerminalView.ResetZoom), TerminalAvailable);
+        Add("terminal.pageUp", Localize.T("Text0096"), "Shift+PageUp", CommandScope.Terminal, [new(Key.PageUp, ModifierKeys.Shift)], () => Action(() => TerminalView.ScrollPages(1)), TerminalAvailable);
+        Add("terminal.pageDown", Localize.T("Text0097"), "Shift+PageDown", CommandScope.Terminal, [new(Key.PageDown, ModifierKeys.Shift)], () => Action(() => TerminalView.ScrollPages(-1)), TerminalAvailable);
+        Add("terminal.top", Localize.T("Text0098"), "Ctrl+Shift+Home", CommandScope.Terminal, [new(Key.Home, both)], () => Action(TerminalView.ScrollToTop), TerminalAvailable);
+        Add("terminal.bottom", Localize.T("Text0099"), "Ctrl+Shift+End", CommandScope.Terminal, [new(Key.End, both)], () => Action(TerminalView.ScrollToBottom), TerminalAvailable);
+        Add("terminal.clearView", Localize.T("Text0100"), "Ctrl+Shift+K", CommandScope.Terminal, [new(Key.K, both)], () => Action(() => TerminalView.ClearBuffer(false)), TerminalAvailable);
+        Add("terminal.clearHistory", Localize.T("Text0101"), Localize.T("Text0047"), CommandScope.Terminal, [], () => Action(() => TerminalView.ClearBuffer(true)), TerminalAvailable);
+        Add("terminal.zoomIn", Localize.T("Text0102"), Localize.T("Text0103"), CommandScope.Terminal, [new(Key.OemPlus, control), new(Key.OemPlus, both), new(Key.Add, control)], () => Action(() => TerminalView.Zoom(1)), TerminalAvailable);
+        Add("terminal.zoomOut", Localize.T("Text0104"), Localize.T("Text0105"), CommandScope.Terminal, [new(Key.OemMinus, control), new(Key.Subtract, control)], () => Action(() => TerminalView.Zoom(-1)), TerminalAvailable);
+        Add("terminal.zoomReset", Localize.T("Text0106"), "Ctrl+0", CommandScope.Terminal, [new(Key.D0, control), new(Key.NumPad0, control)], () => Action(TerminalView.ResetZoom), TerminalAvailable);
         ShortcutList.ItemsSource = _commands.Search(string.Empty).Where(command => !command.Id.StartsWith("tab.activate.", StringComparison.Ordinal) && !command.Id.StartsWith("profile.launch.", StringComparison.Ordinal)).ToArray();
         _performanceTimer.Tick += async (_, _) => await SamplePerformanceAsync();
         _performanceTimerAttached = true;
@@ -69,13 +69,13 @@ public partial class MainWindow
 
     private async Task ExecuteCommandAsync(CommandDescriptor command)
     {
-        if (!command.CanExecute()) { StatusText.Text = "当前焦点/会话状态下不可执行此命令。"; return; }
+        if (!command.CanExecute()) { StatusText.Text = Localize.T("Text0107"); return; }
         try { await command.ExecuteAsync(CancellationToken.None); }
         catch (OperationCanceledException) { }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             _host.Diagnostics.Record(Core.Diagnostics.DiagnosticComponent.Terminal, Core.Diagnostics.DiagnosticEventKind.InputFailed, exception.HResult);
-            StatusText.Text = "命令未完成：" + exception.Message;
+            StatusText.Text = Localize.T("Text0108") + exception.Message;
         }
     }
 
@@ -132,26 +132,26 @@ public partial class MainWindow
         var written = result.Rows.Sum(row => row.Io.InputBytesWritten);
         var now = Stopwatch.GetTimestamp();
         var sessionKey = string.Join(',', sessions.Select(session => session.Id));
-        var rates = "采样率：等待下一次采样；帧为成功发布至 D3DImage 的终端帧，不代表显示器刷新率。";
+        var rates = Localize.T("Text0109");
         if (_previousSampleTime != 0 && sessionKey == _previousSessions)
         {
             var seconds = (now - _previousSampleTime) / (double)Stopwatch.Frequency;
-            rates = FormattableString.Invariant($"终端发布帧 {Math.Max(0, frames - _previousFrames) / seconds:F1} FPS；重绘请求 {Math.Max(0, redraws - _previousRedraws) / seconds:F1}/s；实际 RX {Math.Max(0, read - _previousRead) / seconds:F0} B/s，TX {Math.Max(0, written - _previousWritten) / seconds:F0} B/s");
+            rates = Localize.F("Text0110", Math.Max(0, frames - _previousFrames) / seconds, Math.Max(0, redraws - _previousRedraws) / seconds, Math.Max(0, read - _previousRead) / seconds, Math.Max(0, written - _previousWritten) / seconds);
         }
         if (updateRates)
         {
             _previousSampleTime = now; _previousFrames = frames; _previousRedraws = redraws; _previousRead = read; _previousWritten = written; _previousSessions = sessionKey;
         }
         var text = new StringBuilder(rates).AppendLine();
-        text.AppendLine(FormattableString.Invariant($"ArkTerminal 进程（不含 Shell 子进程）：私有 {result.Private / 1048576d:F1} MiB；工作集 {result.Working / 1048576d:F1} MiB；句柄 {result.Handles}"));
-        text.AppendLine(FormattableString.Invariant($"应用图形：共享纹理容量估算 {shared / 1048576d:F2} MiB（共享表面计一次；不含驱动/设备开销）；待渲染 {pending}"));
-        text.AppendLine($"累计：发布帧 {frames}；重绘请求 {redraws}；RX {read} B；TX {written} B。无独立输出解析队列，输出在会话读取线程解析。");
+        text.AppendLine(Localize.F("Text0111", result.Private / 1048576d, result.Working / 1048576d, result.Handles));
+        text.AppendLine(Localize.F("Text0112", shared / 1048576d, pending));
+        text.AppendLine(Localize.F("Text0113", frames, redraws, read, written));
         for (var index = 0; index < result.Rows.Length; index++)
         {
             var row = result.Rows[index];
-            text.AppendLine(FormattableString.Invariant($"会话 {index + 1} [{row.State}]：输入队列 {row.Io.InputQueueDepth}/{row.Io.InputQueueCapacity} 项；resize 待处理 {row.Io.ResizePending}；网格 {row.Buffer.Columns}×{row.Buffer.Rows}；回滚 {row.Buffer.ScrollbackLines}/{row.Buffer.ScrollbackCapacity} 行，存储估算 {row.Buffer.EstimatedScrollbackBytes / 1048576d:F2}/{row.Buffer.MaxScrollbackBytes / 1048576d:F0} MiB；单元格估算 {row.Buffer.EstimatedCellStorageBytes / 1048576d:F2} MiB"));
+            text.AppendLine(Localize.F("Text0114", index + 1, row.State, row.Io.InputQueueDepth, row.Io.InputQueueCapacity, row.Io.ResizePending, row.Buffer.Columns, row.Buffer.Rows, row.Buffer.ScrollbackLines, row.Buffer.ScrollbackCapacity, row.Buffer.EstimatedScrollbackBytes / 1048576d, row.Buffer.MaxScrollbackBytes / 1048576d, row.Buffer.EstimatedCellStorageBytes / 1048576d));
         }
-        text.Append("会话估算 = 已分配单元格槽位 × 64 B，排除可变字簇文本、CLR/行数组及共享图形开销；不是精确会话内存。隐藏面板停止周期采样。");
+        text.Append(Localize.T("Text0115"));
         return text.ToString();
     }
 
@@ -177,14 +177,14 @@ public partial class MainWindow
             DiagnosticPreviewInput.Focus();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        { StatusText.Text = "诊断预览失败：" + exception.Message; }
+        { StatusText.Text = Localize.T("Text0116") + exception.Message; }
     }
 
     private void DiagnosticPreview_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (!_stageSixReady) return;
         var bytes = Encoding.UTF8.GetByteCount(DiagnosticPreviewInput.Text);
-        DiagnosticSizeText.Text = $"UTF-8：{bytes:N0} / {_host.Diagnostics.Options.MaxExportBytes:N0} 字节；确认后保存至当前数据根的 Diagnostics。";
+        DiagnosticSizeText.Text = Localize.F("Text0117", bytes, _host.Diagnostics.Options.MaxExportBytes);
         ConfirmDiagnosticButton.IsEnabled = bytes <= _host.Diagnostics.Options.MaxExportBytes;
     }
 
@@ -194,16 +194,16 @@ public partial class MainWindow
         {
             var path = await _host.Diagnostics.ExportAsync(DiagnosticPreviewInput.Text);
             MotionPolicy.Hide(DiagnosticPreviewPanel, DiagnosticPreviewInput.Clear);
-            StatusText.Text = "诊断已导出：" + path;
+            StatusText.Text = Localize.T("Text0118") + path;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
-        { StatusText.Text = "导出失败，预览已保留：" + exception.Message; }
+        { StatusText.Text = Localize.T("Text0119") + exception.Message; }
     }
 
     private void CancelDiagnostic_Click(object sender, RoutedEventArgs e)
     {
         MotionPolicy.Hide(DiagnosticPreviewPanel, DiagnosticPreviewInput.Clear);
-        StatusText.Text = "诊断预览已取消，未创建导出文件。";
+        StatusText.Text = Localize.T("Text0120");
     }
 
     private void OpenDataDirectory_Click(object sender, RoutedEventArgs e)
@@ -214,8 +214,8 @@ public partial class MainWindow
 
     private async void ClearDiagnostics_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, "删除当前数据根中应用拥有的诊断日志与导出？不会删除配置、背景或会话正文。", "清理诊断", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        try { await _host.Diagnostics.ClearAsync(); StatusText.Text = "诊断已清理；后续必要错误仍会记录固定事件。"; }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { StatusText.Text = "清理失败：" + exception.Message; }
+        if (MessageBox.Show(this, Localize.T("Text0121"), Localize.T("Text0122"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        try { await _host.Diagnostics.ClearAsync(); StatusText.Text = Localize.T("Text0123"); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { StatusText.Text = Localize.T("Text0124") + exception.Message; }
     }
 }

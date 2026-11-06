@@ -49,11 +49,11 @@ public sealed class RecentProjectsService : IRecentProjectsService
         var issues = new List<ValidationIssue>();
         if (document is null || document.SchemaVersion != ConfigurationDefaults.CurrentSchemaVersion)
         {
-            issues.Add(new("schemaVersion", "最近项目文档或版本无效。"));
+            issues.Add(new("schemaVersion", Localize.T("Text0660")));
         }
         if (document?.Projects is null || document.Projects.Count > MaximumProjects)
         {
-            issues.Add(new("projects", $"最近项目最多 {MaximumProjects} 项。"));
+            issues.Add(new("projects", Localize.F("Text0661", MaximumProjects)));
             return ValidationResult.FromIssues(issues);
         }
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -63,7 +63,7 @@ public sealed class RecentProjectsService : IRecentProjectsService
             if (project is null || string.IsNullOrWhiteSpace(project.Path) || project.Path.Contains('\0') ||
                 string.IsNullOrWhiteSpace(project.DisplayName) || project.DisplayName.Length > 256 || !paths.Add(project.Path))
             {
-                issues.Add(new($"projects[{index}]", "项目路径、显示名或唯一性无效。"));
+                issues.Add(new($"projects[{index}]", Localize.T("Text0662")));
             }
         }
         return ValidationResult.FromIssues(issues);
