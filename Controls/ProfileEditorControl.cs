@@ -35,7 +35,7 @@ public sealed class ProfileEditorControl : UserControl, IDisposable
     public event Action? CatalogSaved;
     public event Action? PreviewChanged;
     public TerminalProfile? PreviewProfile { get; private set; }
-    public Rendering.DirectWriteTerminalControl FontPreview { get; } = new() { Height = 110, IsHitTestVisible = false };
+    public Rendering.DirectWriteTerminalControl FontPreview { get; } = new() { Height = 110, IsHitTestVisible = false, IsInputEnabled = false };
     public string? SelectedProfileId => _selectedId;
     private ProfileCatalog Catalog => _host.ProfilesDraft?.Catalog ?? _host.Catalog!;
 

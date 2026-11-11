@@ -29,6 +29,10 @@ public sealed class WpfTextInputBridge : TextBox
         AcceptsReturn = false;
         AcceptsTab = false;
         IsUndoEnabled = false;
+        foreach (var command in new[] { ApplicationCommands.Copy, ApplicationCommands.Cut, ApplicationCommands.Paste, ApplicationCommands.SelectAll })
+        {
+            CommandBindings.Add(new CommandBinding(command, (_, e) => e.Handled = true, (_, e) => e.CanExecute = false));
+        }
         AddHandler(TextCompositionManager.PreviewTextInputStartEvent, new TextCompositionEventHandler(OnComposition));
         AddHandler(TextCompositionManager.PreviewTextInputUpdateEvent, new TextCompositionEventHandler(OnComposition));
         PreviewTextInput += OnTextCommit;
@@ -63,7 +67,8 @@ public sealed class WpfTextInputBridge : TextBox
     {
         // Window deactivation does not necessarily change WPF's logical keyboard focus.
         // Cancel before the window's normal focus handling lets TSF finalize the text.
-        if (message == 0x0006 && (wParam.ToInt64() & 0xffff) == 0 || message == 0x0008)
+        // On re-activation any surviving composition is stale, so cancel it too.
+        if (message == 0x0008 || message == 0x0006 && ((wParam.ToInt64() & 0xffff) == 0 || _composing))
         {
             CancelComposition();
         }

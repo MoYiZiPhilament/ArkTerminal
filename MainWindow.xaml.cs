@@ -378,6 +378,10 @@ public partial class MainWindow : Window
                 ShowActiveWorkbench();
                 if (tab.Session is not null) TerminalView.FocusInput();
             }
+            else if (!_settingsVisible && tab == _tabs.ActiveTab && tab.Session is not null)
+            {
+                TerminalView.FocusInput();
+            }
             if (e.ClickCount == 1)
             {
                 (sender as FrameworkElement)?.BringIntoView();
@@ -401,8 +405,13 @@ public partial class MainWindow : Window
         });
     }
 
-    private void PreviousTab_Click(object sender, RoutedEventArgs e) => _tabs.Next(-1);
-    private void NextTab_Click(object sender, RoutedEventArgs e) => _tabs.Next(1);
+    private void PreviousTab_Click(object sender, RoutedEventArgs e) => NavigateTabs(-1);
+    private void NextTab_Click(object sender, RoutedEventArgs e) => NavigateTabs(1);
+    private void NavigateTabs(int delta)
+    {
+        _tabs.Next(delta);
+        if (!_settingsVisible && _tabs.ActiveTab.Session is not null) TerminalView.FocusInput();
+    }
 
     private async void CloseTab_Click(object sender, RoutedEventArgs e)
     {
@@ -895,7 +904,7 @@ public partial class MainWindow : Window
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (DiagnosticPreviewPanel.Visibility == Visibility.Visible) return;
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
         var terminalFocused = TerminalView.IsVisible && TerminalView.IsInputFocused && !TerminalView.IsComposing;
         var command = _commands.Match(key, Keyboard.Modifiers, terminalFocused);
         if (command is null) return;

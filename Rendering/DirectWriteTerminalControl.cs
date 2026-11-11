@@ -63,6 +63,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
     private (int Min, int Max)? _presentedCursorBand;
     private bool _presentedCursorVisible;
     public bool HasUserZoom { get; private set; }
+    public bool IsInputEnabled { get; set; } = true;
     public bool IsComposing => _imeHost?.OwnsKeyInput == true;
     public long PublishedFrames => Interlocked.Read(ref _publishedFrames);
     public long RedrawRequests => Interlocked.Read(ref _redrawRequests);
@@ -104,7 +105,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         };
         Loaded += (_, _) =>
         {
-            if (_preview is null && _imeHost is null)
+            if (IsInputEnabled && _preview is null && _imeHost is null)
             {
                 _imeHost = new WpfTextInputBridge();
                 _imeHost.CommitText += Submit;
@@ -441,6 +442,10 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
 
     public void FocusInput()
     {
+        if (!IsInputEnabled)
+        {
+            return;
+        }
         if (_imeHost is not null)
         {
             _imeHost.Focus();

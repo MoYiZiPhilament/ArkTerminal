@@ -42,8 +42,8 @@ public partial class MainWindow
         Add("workbench.performance", Localize.T("Text0083"), Localize.T("Text0047"), CommandScope.Workbench, [], () => Action(TogglePerformanceMode));
         Add("workbench.metrics", Localize.T("Text0084"), Localize.T("Text0047"), CommandScope.Workbench, [], () => Action(TogglePerformancePanel));
         Add("workbench.diagnostics", Localize.T("Text0085"), Localize.T("Text0047"), CommandScope.Workbench, [], PreviewDiagnosticsAsync);
-        Add("tab.next", Localize.T("Text0086"), "Ctrl+Tab", CommandScope.Workbench, [new(Key.Tab, control)], () => Action(() => _tabs.Next(1)));
-        Add("tab.previous", Localize.T("Text0087"), "Ctrl+Shift+Tab", CommandScope.Workbench, [new(Key.Tab, both)], () => Action(() => _tabs.Next(-1)));
+        Add("tab.next", Localize.T("Text0086"), "Ctrl+Tab", CommandScope.Workbench, [new(Key.Tab, control)], () => Action(() => NavigateTabs(1)));
+        Add("tab.previous", Localize.T("Text0087"), "Ctrl+Shift+Tab", CommandScope.Workbench, [new(Key.Tab, both)], () => Action(() => NavigateTabs(-1)));
         Add("tab.close", Localize.T("Text0088"), "Ctrl+Shift+W", CommandScope.Workbench, [new(Key.W, both)], () => CloseTabAsync(_tabs.ActiveTab), () => !_tabs.ActiveTab.IsNewPage);
         Add("tab.duplicate", Localize.T("Text0089"), Localize.T("Text0047"), CommandScope.Workbench, [], () => DuplicateAsync(_tabs.ActiveTab), () => _tabs.ActiveTab.Launch is not null);
         Add("tab.restart", Localize.T("Text0090"), Localize.T("Text0047"), CommandScope.Workbench, [], () => RestartAsync(_tabs.ActiveTab), () => _tabs.ActiveTab.Launch is not null);
