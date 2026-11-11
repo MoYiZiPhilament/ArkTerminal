@@ -704,7 +704,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
                 _fullInvalidation = true;
                 // New output can supersede a healthy in-flight frame; draw the latest content immediately.
                 retry = version == _renderVersion || _surface.LastRenderWasBusy;
-                if (_surface.LastRenderWasBusy) retryDelay = TimeSpan.FromMilliseconds(16);
+                if (_surface.LastRenderWasBusy || _cursorMotion.IsAnimating) retryDelay = TimeSpan.FromMilliseconds(16);
             }
             if (presented && version == _renderVersion)
             {
@@ -757,25 +757,25 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             SyncCursorAnimationClock();
             return;
         }
-        if (!_renderQueued && !_renderRetry.IsEnabled) RequestFullRender();
+        if (!_renderQueued && !_renderRetry.IsEnabled) RequestFullRender(DispatcherPriority.Render);
     }
 
-    private void RequestFullRender()
+    private void RequestFullRender(DispatcherPriority priority = DispatcherPriority.Background)
     {
         Interlocked.Increment(ref _redrawRequests);
         _renderVersion++;
         _fullInvalidation = true;
-        QueueRender();
+        QueueRender(priority);
     }
 
-    private void QueueRender()
+    private void QueueRender(DispatcherPriority priority = DispatcherPriority.Background)
     {
         if (_renderQueued || _renderRetry.IsEnabled || !_active || !IsLoaded || !IsVisible || (_session is null && _preview is null))
         {
             return;
         }
         _renderQueued = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, RenderFrame);
+        Dispatcher.BeginInvoke(priority, RenderFrame);
     }
 
     private void RefreshSnapshot()
