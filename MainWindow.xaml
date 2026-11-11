@@ -14,6 +14,19 @@
         <!-- Legacy region fallback; Windows 11 switches to the DWM outer silhouette after attachment. -->
         <shell:WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="24" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <Style x:Key="RoundedScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollViewer">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <controls:RoundedBorder CornerRadius="12">
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="{TemplateBinding Padding}"/>
+                    </controls:RoundedBorder>
+                    <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Orientation="Vertical" Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Value="{Binding VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" Margin="4,0,0,0"/>
+                    <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Maximum="{TemplateBinding ScrollableWidth}" ViewportSize="{TemplateBinding ViewportWidth}" Value="{Binding HorizontalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" Margin="0,4,0,0"/>
+                </Grid>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+    </Window.Resources>
     <controls:RoundedBorder x:Name="WindowFrame" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Theme.BorderBrush}">
     <Grid x:Name="WindowLayer">
         <Grid x:Name="BackgroundLayer" IsHitTestVisible="False">
@@ -101,9 +114,9 @@
             <GridSplitter x:Name="LeftTabSplitter" Grid.Row="2" Grid.Column="1" Width="5" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" Background="Transparent" Cursor="SizeWE"/>
 
             <Grid x:Name="WorkbenchContent" Grid.Row="2" Grid.Column="2" Margin="10,8,10,0">
-                <ScrollViewer x:Name="NewPage" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="24,24,24,16" MaxWidth="880">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                <ScrollViewer x:Name="NewPage" Style="{StaticResource RoundedScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,12,0,16" Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600">
+                        <StackPanel Orientation="Horizontal" Margin="4,0,0,24">
                             <Border Width="48" Height="48" CornerRadius="14" Background="{DynamicResource Theme.ActiveTabBackground}" Margin="0,0,16,0">
                                 <TextBlock Text="&gt;_" FontFamily="Cascadia Mono, Consolas" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource Theme.AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -155,17 +168,6 @@
                 </ScrollViewer>
                 <Grid x:Name="SettingsPanel" Visibility="Collapsed" Margin="8,8,8,0">
 <Grid.Resources>
-    <Style x:Key="SettingsScrollViewer" TargetType="ScrollViewer">
-        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollViewer">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                <controls:RoundedBorder CornerRadius="12">
-                    <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="{TemplateBinding Padding}"/>
-                </controls:RoundedBorder>
-                <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Orientation="Vertical" Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Value="{Binding VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" Margin="4,0,0,0"/>
-                <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Row="1" Orientation="Horizontal" Maximum="{TemplateBinding ScrollableWidth}" ViewportSize="{TemplateBinding ViewportWidth}" Value="{Binding HorizontalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" Margin="0,4,0,0"/>
-            </Grid>
-        </ControlTemplate></Setter.Value></Setter>
-    </Style>
     <Style TargetType="TabControl">
         <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabControl">
@@ -198,7 +200,7 @@
 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 <TextBlock x:Name="SettingsSectionTitle" Text="{loc:Text Text0733}" FontSize="28" FontWeight="SemiBold" Margin="4,0,0,20"/>
 <TabControl x:Name="SettingsCategories" Grid.Row="1" TabStripPlacement="Left" SelectionChanged="SettingsCategory_Changed">
-<TabItem Header="{loc:Text Text0733}" Tag="&#xE790;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}" Margin="0,0,0,16"><StackPanel><TextBlock Text="{loc:Text Text0734}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/><StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0735}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="UiFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
+<TabItem Header="{loc:Text Text0733}" Tag="&#xE790;"><ScrollViewer Style="{StaticResource RoundedScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}" Margin="0,0,0,16"><StackPanel><TextBlock Text="{loc:Text Text0734}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/><StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0735}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="UiFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0736}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0737}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalFontInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0738}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="TerminalFontSizeInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
@@ -234,7 +236,7 @@
                         </StackPanel></Border>
 
 </StackPanel></ScrollViewer></TabItem>
-<TabItem Header="{loc:Text Text0782}" Tag="&#xE765;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><CheckBox x:Name="HotkeyEnabledInput" Content="{loc:Text Text0783}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
+<TabItem Header="{loc:Text Text0782}" Tag="&#xE765;"><ScrollViewer Style="{StaticResource RoundedScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><CheckBox x:Name="HotkeyEnabledInput" Content="{loc:Text Text0783}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0784}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="HotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <CheckBox x:Name="FocusHotkeyEnabledInput" Content="{loc:Text Text0785}" Checked="WorkbenchInput_Changed" Unchecked="WorkbenchInput_Changed" Margin="0,0,0,8"/>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0786}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="FocusHotkeyInput" Width="240" TextChanged="WorkbenchInput_Changed"/></StackPanel>
@@ -244,7 +246,7 @@
 <ItemsControl x:Name="ShortcutList"><ItemsControl.ItemTemplate><DataTemplate><Border Padding="4,7" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="0,0,0,1"><DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding Shortcut}" Width="215" TextWrapping="Wrap"/><TextBlock Text="{Binding Title}"/></DockPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
 <TextBlock Text="{loc:Text Text0788}" Margin="0,12,0,0"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
-<TabItem Header="{loc:Text Text0789}" Tag="&#xE8B7;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="{loc:Text Text0077}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+<TabItem Header="{loc:Text Text0789}" Tag="&#xE8B7;"><ScrollViewer Style="{StaticResource RoundedScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="{loc:Text Text0077}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Text0790}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="DefaultProfileInput" Width="240" SelectedValuePath="Id" SelectionChanged="WorkbenchInput_Changed"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text Language}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="LanguageInput" Width="240" SelectedValuePath="Tag" SelectionChanged="WorkbenchInput_Changed"><ComboBoxItem Content="English" Tag="en-US"/><ComboBoxItem Content="{loc:Text Text0791}" Tag="zh-CN"/></ComboBox></StackPanel>
 <StackPanel Orientation="Horizontal" Margin="0,0,0,12"><TextBlock Text="{loc:Text TimeZone}" Width="180" VerticalAlignment="Center"/><ComboBox x:Name="TimeZoneInput" Width="360" SelectedValuePath="Id" DisplayMemberPath="DisplayName" SelectionChanged="WorkbenchInput_Changed"/></StackPanel>
@@ -263,7 +265,7 @@
 <StackPanel Orientation="Horizontal" Margin="0,6,0,16"><TextBlock Text="{loc:Text Text0803}" Width="180" VerticalAlignment="Center"/><TextBox x:Name="LongTaskSecondsInput" Width="160" TextChanged="WorkbenchInput_Changed"/></StackPanel>
 <ContentControl x:Name="ProfileEditorHost"/>
 </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
-<TabItem Header="{loc:Text Text0804}" Tag="&#xE9D9;"><ScrollViewer Style="{StaticResource SettingsScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="{loc:Text Text0804}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+<TabItem Header="{loc:Text Text0804}" Tag="&#xE9D9;"><ScrollViewer Style="{StaticResource RoundedScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"><StackPanel Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}" MinWidth="600"><Border Padding="20" CornerRadius="12" Background="{DynamicResource Theme.CardBackground}"><StackPanel><TextBlock Text="{loc:Text Text0804}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
 <TextBlock x:Name="SettingsDataRootText" Margin="0,0,0,12"/>
 <WrapPanel><Button Content="{loc:Text Text0085}" Click="PreviewDiagnostics_Click"/><Button Content="{loc:Text Text0084}" Click="PerformancePanel_Click"/></WrapPanel>
 <TextBlock Text="{loc:Text Text0805}" Margin="0,10"/>
