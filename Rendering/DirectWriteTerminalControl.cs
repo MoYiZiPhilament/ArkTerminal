@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -59,6 +60,8 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
     private long _redrawRequests;
     private bool _cursorAnimationEnabled = true;
     private bool _cursorRenderingSubscribed;
+    private (int Min, int Max)? _presentedCursorBand;
+    private bool _presentedCursorVisible;
     public bool HasUserZoom { get; private set; }
     public bool IsComposing => _imeHost?.OwnsKeyInput == true;
     public long PublishedFrames => Interlocked.Read(ref _publishedFrames);
@@ -179,6 +182,8 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         _renderVersion++;
         _cursorMotion.Reset();
         SyncCursorAnimationClock();
+        _presentedCursorBand = null;
+        _presentedCursorVisible = false;
         _imeHost?.CancelComposition();
         if (_session is not null)
         {
@@ -649,6 +654,14 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         e.Handled = true;
     }
 
+    private static (int Min, int Max)? CursorBand(Vector2 position, TerminalScreenSnapshot snapshot)
+    {
+        if (!snapshot.CursorVisible || snapshot.Lines.Count == 0) return null;
+        var last = snapshot.Lines.Count - 1;
+        var row = Math.Clamp((int)MathF.Floor(position.Y), 0, last);
+        return (row, Math.Clamp(row + 1, 0, last));
+    }
+
     private async void RenderFrame()
     {
         if (!_active || !IsLoaded || !IsVisible || ActualWidth <= 0 || ActualHeight <= 0 || (_session is null && _preview is null))
@@ -664,29 +677,51 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             EnsureFonts();
             var snapshot = _snapshot ??= _preview ?? _session!.GetSnapshot(_scrollbackOffset);
             var cursorPosition = _cursorMotion.Update(snapshot, Stopwatch.GetTimestamp(), _cursorAnimationEnabled);
-            if (_cursorMotion.TargetChanged || _cursorMotion.IsAnimating)
+            var cursorBand = CursorBand(cursorPosition, snapshot);
+            if (snapshot.CursorVisible != _presentedCursorVisible || (_cursorMotion.TargetChanged && !_cursorMotion.IsAnimating))
             {
-                // A cursor move can leave the previous row outside the parser's dirty range.
+                // Visibility flips, snaps, large jumps and view changes repaint everything once.
                 _fullInvalidation = true;
             }
             var scale = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             _surface.Resize((int)Math.Ceiling(ActualWidth * scale), (int)Math.Ceiling(ActualHeight * scale));
-            var startRow = 0;
-            var endRow = snapshot.Lines.Count - 1;
-            Int32Rect? dirtyRect = null;
             if (_visualStyle.BackgroundOpacity < 0.999)
             {
                 _fullInvalidation = true;
             }
-            if (!_fullInvalidation && _pendingChanges is not null)
+            var lastRow = snapshot.Lines.Count - 1;
+            var startRow = 0;
+            var endRow = lastRow;
+            Int32Rect? dirtyRect = null;
+            if (!_fullInvalidation)
             {
-                startRow = Math.Clamp(_pendingChanges.DirtyStartRow, 0, Math.Max(0, endRow));
-                endRow = Math.Clamp(_pendingChanges.DirtyEndRow, startRow, Math.Max(startRow, endRow));
-                dirtyRect = new Int32Rect(
-                    0,
-                    (int)Math.Floor(startRow * LineHeight * scale),
-                    (int)Math.Ceiling(ActualWidth * scale),
-                    Math.Max(1, (int)Math.Ceiling((endRow - startRow + 1) * LineHeight * scale)));
+                var hasRange = false;
+                void Include(int min, int max)
+                {
+                    if (!hasRange) { startRow = min; endRow = max; hasRange = true; }
+                    else { startRow = Math.Min(startRow, min); endRow = Math.Max(endRow, max); }
+                }
+                if (_pendingChanges is not null)
+                {
+                    Include(Math.Clamp(_pendingChanges.DirtyStartRow, 0, Math.Max(0, lastRow)), Math.Clamp(_pendingChanges.DirtyEndRow, 0, Math.Max(0, lastRow)));
+                }
+                if (_cursorMotion.IsAnimating)
+                {
+                    // Repaint the previous and current cursor rows so the moving outline leaves no trail.
+                    if (cursorBand is { } band) Include(band.Min, band.Max);
+                    if (_presentedCursorBand is { } previous) Include(previous.Min, previous.Max);
+                }
+                if (hasRange)
+                {
+                    startRow = Math.Clamp(startRow, 0, Math.Max(0, lastRow));
+                    endRow = Math.Clamp(endRow, startRow, Math.Max(startRow, lastRow));
+                    var pixelTop = Math.Clamp((int)Math.Floor(startRow * LineHeight * scale), 0, _surface.PixelHeight);
+                    var pixelBottom = Math.Clamp((int)Math.Ceiling((endRow + 1) * LineHeight * scale), pixelTop, _surface.PixelHeight);
+                    var pixelWidth = Math.Clamp((int)Math.Ceiling(ActualWidth * scale), 1, _surface.PixelWidth);
+                    var pixelHeight = pixelBottom - pixelTop;
+                    if (pixelHeight > 0) dirtyRect = new Int32Rect(0, pixelTop, pixelWidth, pixelHeight);
+                    else _fullInvalidation = true;
+                }
             }
             var presented = await _surface.RenderAsync(
                 (float)(96 * scale),
@@ -698,6 +733,8 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
                 Interlocked.Increment(ref _publishedFrames);
                 InvalidateVisual();
                 _lastRenderError = null;
+                _presentedCursorBand = cursorBand;
+                _presentedCursorVisible = snapshot.CursorVisible;
             }
             else
             {
