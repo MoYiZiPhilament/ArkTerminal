@@ -1,6 +1,6 @@
 # Third-party notices
 
-These notices accompany ArkTerminal 1.2.2a. Exact restored packages,
+These notices accompany ArkTerminal 1.2.4a. Exact restored packages,
 versions, license expressions and NuGet content hashes are recorded in
 `Licenses/packages.json`. Runtime notices are copied from the pinned Microsoft
 runtime packs by the packaging script. Windows SDK build tools are build-only

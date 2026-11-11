@@ -1,10 +1,10 @@
 <Project>
   <PropertyGroup>
-    <Version>1.2.2-a</Version>
-    <InformationalVersion>1.2.2a</InformationalVersion>
+    <Version>1.2.4-a</Version>
+    <InformationalVersion>1.2.4a</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <AssemblyVersion>1.2.2</AssemblyVersion>
-    <FileVersion>1.2.2</FileVersion>
+    <AssemblyVersion>1.2.4</AssemblyVersion>
+    <FileVersion>1.2.4</FileVersion>
     <RuntimeFrameworkVersion>10.0.11</RuntimeFrameworkVersion>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishAot>false</PublishAot>
