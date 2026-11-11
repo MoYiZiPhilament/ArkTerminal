@@ -1,10 +1,12 @@
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Shell;
 using ArkTerminal.Core.Agents;
 using ArkTerminal.Core.Profiles;
 using ArkTerminal.Terminal.Agents;
 using ArkTerminal.Terminal.Sessions;
+using ArkTerminal.Visuals;
 
 namespace ArkTerminal.Controls;
 
@@ -52,8 +54,10 @@ public sealed class AgentPickerControl : UserControl
         var jsonActions = new WrapPanel(); jsonActions.Children.Add(_enable); jsonActions.Children.Add(_disable); root.Children.Add(jsonActions);
         _enable.Click += async (_, _) => await RunAsync(() => SetEnabledAsync(true));
         _disable.Click += async (_, _) => await RunAsync(() => SetEnabledAsync(false));
-        Label(root, Localize.T("Text0259"), _override);
-        var paths = new WrapPanel(); Button(paths, Localize.T("Text0260"), SaveOverrideAsync); root.Children.Add(paths);
+        var pathCard = new StackPanel();
+        Label(pathCard, Localize.T("Text0259"), _override);
+        var paths = new WrapPanel(); Button(paths, Localize.T("Text0260"), SaveOverrideAsync); pathCard.Children.Add(paths);
+        root.Children.Add(Card(pathCard));
         Label(_recipe, Localize.T("Text0261"), _name);
         Label(_recipe, Localize.T("Text0262"), _model);
         Label(_recipe, Localize.T("Text0263"), _permissions);
@@ -63,8 +67,9 @@ public sealed class AgentPickerControl : UserControl
         Button(recipeActions, Localize.T("Text0266"), PreviewAsync);
         Button(recipeActions, Localize.T("Text0267"), LaunchAsync);
         Button(recipeActions, Localize.T("Text0268"), CreateProfileAsync);
-        _recipe.Children.Add(recipeActions); _recipe.Children.Add(_preview); root.Children.Add(_recipe);
+        _recipe.Children.Add(recipeActions); _recipe.Children.Add(_preview);
         _recipe.Children.Add(new TextBlock { Text = Localize.T("Text0269"), TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) });
+        root.Children.Add(Card(_recipe));
         Content = root;
         _agents.SelectionChanged += (_, _) => Select();
         void Invalidate() => _preview.Text = string.Empty;
@@ -238,16 +243,38 @@ public sealed class AgentPickerControl : UserControl
 
     public static bool Review(Window? owner, string title, string text, string accept)
     {
-        var dialog = new Window { Owner = owner, Title = title, Width = 720, Height = 570, MinWidth = 440, MinHeight = 320, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        dialog.SetResourceReference(BackgroundProperty, "Theme.WindowBackground");
+        var dialog = new Window
+        {
+            Owner = owner, Title = title, Width = 720, Height = 570, MinWidth = 440, MinHeight = 320,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner, WindowStyle = WindowStyle.None, ShowInTaskbar = false,
+            FontFamily = owner?.FontFamily ?? Application.Current.MainWindow?.FontFamily,
+            FontSize = owner?.FontSize ?? Application.Current.MainWindow?.FontSize ?? 14
+        };
+        dialog.SetResourceReference(BackgroundProperty, "Theme.CardBackground");
         var panel = new DockPanel { Margin = new(18) };
+        var header = new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new(0, 0, 0, 12) };
+        DockPanel.SetDock(header, Dock.Top); panel.Children.Add(header);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var yes = new Button { Content = accept, IsDefault = true }; yes.Click += (_, _) => dialog.DialogResult = true;
+        var yes = new Button { Content = accept, IsDefault = true };
+        if (Application.Current.TryFindResource("PrimaryButton") is Style primary) yes.Style = primary;
+        yes.Click += (_, _) => dialog.DialogResult = true;
         buttons.Children.Add(yes); buttons.Children.Add(new Button { Content = Localize.T("Text0218"), IsCancel = true });
         DockPanel.SetDock(buttons, Dock.Bottom); panel.Children.Add(buttons);
         panel.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new(0, 0, 0, 12) });
-        dialog.Content = panel;
+        var frame = new RoundedBorder { CornerRadius = new(12), BorderThickness = new(1), Child = panel };
+        frame.SetResourceReference(Border.BackgroundProperty, "Theme.CardBackground");
+        frame.SetResourceReference(Border.BorderBrushProperty, "Theme.BorderBrush");
+        dialog.Content = frame;
+        WindowChrome.SetWindowChrome(dialog, new WindowChrome { CaptionHeight = 44, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(24), UseAeroCaptionButtons = false });
+        dialog.Loaded += (_, _) => MotionPolicy.Show(frame);
         return dialog.ShowDialog() == true;
+    }
+    private static Border Card(UIElement child)
+    {
+        var border = new Border { CornerRadius = new(10), Padding = new(14), Margin = new(0, 12, 0, 0), BorderThickness = new(1), Child = child };
+        border.SetResourceReference(Border.BackgroundProperty, "Theme.InputBackground");
+        border.SetResourceReference(Border.BorderBrushProperty, "Theme.BorderBrush");
+        return border;
     }
     private static void Label(Panel panel, string text, UIElement input)
     { panel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 4) }); panel.Children.Add(input); }
