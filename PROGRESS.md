@@ -10,7 +10,7 @@
 - 修复 `OnPreviewKeyDown` 未解包 `Key.System`：Alt+字母、Alt+方向与单独 F10 此前在所有模式下都不触发，现与命令路由对齐。非 win32 模式下这些键由「无反应」变为按既有 EncodeKey / ESC 前缀语义工作（激活既有意图代码，属行为变化）。
 - 渲染热路径：完成的 GPU 帧不再因新输出取代内容而整帧丢弃（保留资源版本与前缓冲检查，下一帧增量补画待处理变更）；GPU 等待由 `Thread.Sleep(1)`（实际约 15.6ms）改为 `SpinWait`，D3DImage 持锁降到亚毫秒；光标动画不再每 vsync 强制全屏重绘，改走既有光标行带增量路径；输出路径渲染与快照应用提升到 Render 优先级。同步 / 取消 / 资源释放契约、零等待 TryLock 失败分支配对、前缓冲不可用保留绑定、半透明背景全量重绘均不变。
 - 显示版本 `1.2.6a`，NuGet 构建版本 `1.2.6-a`，数字版本 / MSI `1.2.6`，MSIX 清单 `1.2.6.0`。
-- 本轮验证：Debug / Release 锁定构建均 0 警告 / 0 错误。仓库外探针 56 项通过：win32 Ctrl+C/A 字节回归、特殊键全表（Esc/Enter/Back/Tab/四方向/Home/End/Ins/Del/PgUp/PgDn/F1–F12）VK/Sc/Uc/Cs、Ctrl+方向 Cs=264、Ctrl+Enter Uc=10、Ctrl+Backspace Uc=127、Alt+字母 Uc=0、Ctrl+Shift+字母 Cs=24、Shift+Tab、Ctrl+Space，非 win32 EncodeKey/EncodeControlCharacter golden 不变（Ctrl+C→ETX 等），以及 win32/DECCKM 模式位跨备用屏持久、仅 RIS 复位。
+- 本轮验证：Debug / Release 锁定构建均 0 警告 / 0 错误。仓库外探针 56 项通过：win32 Ctrl+C/A 字节回归、特殊键全表（Esc/Enter/Back/Tab/四方向/Home/End/Ins/Del/PgUp/PgDn/F1–F12）VK/Sc/Uc/Cs、Ctrl+方向 Cs=264、Ctrl+Enter Uc=10、Ctrl+Backspace Uc=127、Alt+字母 Uc=0、Ctrl+Shift+字母 Cs=24、Shift+Tab、Ctrl+Space，非 win32 EncodeKey/EncodeControlCharacter golden 不变（Ctrl+C→ETX 等），以及 win32/DECCKM 模式位跨备用屏持久、仅 RIS 复位。隔离便携实例（`portable.flag`，数据根独立）启动并正确渲染新建页，exe 产品版本 `1.2.6a` / 文件版本 `1.2.6`。
 - 已知限制：AltGr 字符输入在两种模式下都被 Ctrl+字母分支拦截（既有问题，本轮不扩 scope）。真实 Shell 直开 Agent 的按键验收、输入法组合手感、光标残影与帧率属运行时主观项，本轮以算法探针与结构改动验证，建议人工在真实会话复核；既有发行验收缺口不变。
 
 ## 1.2.4a Shell 修复（历史）
