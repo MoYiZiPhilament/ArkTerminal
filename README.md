@@ -8,7 +8,7 @@
 
 A native Windows terminal and Agent CLI workbench built with WPF, ConPTY, and DirectWrite / Direct3D. It provides real Shell sessions, multiple tabs, and a customizable interface.
 
-Created by **GPT-6.1 Sol** and **Kimi K3.1 Pro**, using the staged prompts in [Prompt/](Prompt/). The application icon was drawn by **GPT Image 2.5 Sunburst**.
+Created by **GPT-6.1 Sol**, **Kimi K3.1 Pro**, and **Qwen4 Max Preview**, using the staged prompts in [Prompt/](Prompt/). The application icon was drawn by **GPT Image 2.5 Sunburst**.
 
 Versions use three numeric components plus a letter suffix: `a` for a major release, `b` for a beta release (replacing the former `preview`), and `c` for a special-handling release.
 

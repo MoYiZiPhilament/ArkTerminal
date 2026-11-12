@@ -8,7 +8,7 @@
 
 Windows 原生终端与 Agent CLI 工作台。基于 WPF、ConPTY 和 DirectWrite / Direct3D，提供真实 Shell 会话、多标签和可定制界面。
 
-项目由 **GPT-6.1 Sol** 和 **Kimi K3.1 Pro** 完成，使用 [Prompt/](Prompt/) 中的分段完成提示词推进实施。应用图标由 **GPT Image 2.5 Sunburst** 绘制。
+项目由 **GPT-6.1 Sol**、**Kimi K3.1 Pro** 和 **Qwen4 Max Preview** 完成，使用 [Prompt/](Prompt/) 中的分段完成提示词推进实施。应用图标由 **GPT Image 2.5 Sunburst** 绘制。
 
 版本使用 `x.x.x` 加字母后缀：`a` 为主要版本，`b` 为测试版本（替代原 `preview`），`c` 为特殊处理版本。
 
