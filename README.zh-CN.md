@@ -14,7 +14,7 @@ Windows 原生终端与 Agent CLI 工作台。基于 WPF、ConPTY 和 DirectWrit
 
 ## 下载与使用
 
-[下载 1.2.4a 主要版本](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v1.2.4a)。面向 Windows x64，自带 .NET 运行时。
+[下载 1.2.6a 主要版本](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v1.2.6a)。面向 Windows x64，自带 .NET 运行时。
 
 | 格式 | 使用方式 | 数据目录 |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ Windows 原生终端与 Agent CLI 工作台。基于 WPF、ConPTY 和 DirectWrit
 
 首次启动还会按 Windows 系统 UI 语言选择界面语言（中文系统使用简体中文，其他系统使用英语），并保存当前 Windows 时区。可在“设置 → 配置与 Profile”中修改。后续启动使用已保存选择，不持续跟随系统变化。用户可见时间使用配置时区；存储记录和诊断仍保留 UTC。
 
-`1.2.4a` 为主要版本，新建页改为圆角卡片、块状光标移动更平滑、Ctrl 快捷键更可靠，并延续中英文本地化与英文 README 默认展示。Windows 10、跨显示器、物理输入和长期资源验证尚未完成；MSI 的实际安装 / 修复 / 卸载 / 升级仍待验收。MSIX 尚未完成隔离安装验证，包身份下 MCP 和管理员会话目前不可用。完整范围见 [项目进度](PROGRESS.md)。
+`1.2.6a` 为主要版本，修复直接在 Shell 中启动 Agent 时 Esc、Ctrl 组合与功能键等特殊键输入，并通过上屏已完成的 GPU 帧、缩短 D3DImage 持锁等待、按 Render 优先级增量重绘光标行带，让打字回显与块状光标移动更平滑流畅，延续中英文本地化与英文 README 默认展示。Windows 10、跨显示器、物理输入和长期资源验证尚未完成；MSI 的实际安装 / 修复 / 卸载 / 升级仍待验收。MSIX 尚未完成隔离安装验证，包身份下 MCP 和管理员会话目前不可用。完整范围见 [项目进度](PROGRESS.md)。
 
 ## 功能
 
@@ -65,7 +65,7 @@ pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin '<Windows SDK x64 工具�
 pwsh -File Packaging/Build-Msi.ps1
 ```
 
-打包还需 Windows SDK 和 WiX 工具链，具体版本及准备步骤见 [打包说明](Packaging/README.md)。默认输出 `bin/Packages/1.2.4a/`，包含 ZIP、MSIX、MSI 及 SHA-256 清单。exe 与 MSI 未做 Authenticode 签名；MSIX 使用临时开发证书。
+打包还需 Windows SDK 和 WiX 工具链，具体版本及准备步骤见 [打包说明](Packaging/README.md)。默认输出 `bin/Packages/1.2.6a/`，包含 ZIP、MSIX、MSI 及 SHA-256 清单。exe 与 MSI 未做 Authenticode 签名；MSIX 使用临时开发证书。
 
 ## 源码与文档
 

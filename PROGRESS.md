@@ -2,9 +2,18 @@
 
 更新日期：2026-11-12（Asia/Shanghai）。本表依据当前源码、`docs/IMPLEMENTATION-HISTORY.md` 的历史验收记录及本次仓库检查整理。
 
-**当前结论：阶段 1–9 已有实现；阶段 10 已实施本机修复、测量和预览打包，最终发行验收未通过。** 当前主要版本为 `1.2.4a`。MSIX 安装 / 包身份下 MCP 与 UAC、干净 Windows 环境、物理输入和长期资源验收仍阻塞完整交付。
+**当前结论：阶段 1–9 已有实现；阶段 10 已实施本机修复、测量和预览打包，最终发行验收未通过。** 当前主要版本为 `1.2.6a`。MSIX 安装 / 包身份下 MCP 与 UAC、干净 Windows 环境、物理输入和长期资源验收仍阻塞完整交付。
 
-## 1.2.4a Shell 修复
+## 1.2.6a 输入与渲染修复
+
+- 修复直接在 Shell 中启动 Agent 时的特殊键输入：win32-input-mode（`?9001`）激活时，此前仅裸 Ctrl+A-Z 编码为 win32-input 记录，Esc、Enter、Backspace、Tab、方向、Home/End/Insert/Delete/PageUp/PageDown、F1–F12 及 Ctrl/Alt/Shift 组合仍发纯 VT，被 conhost 误判而失效。现对所有特殊键与修饰组合完整编码为 `ESC[Vk;Sc;Uc;Kd;Cs;Rc_` 记录（含扩展键标志与修饰键按下/抬起记录）；单 Ctrl 输出与旧实现逐字节一致，命令面板 terminal.interrupt 不变。普通文本与非 win32 路径（Profile 启动、普通 Shell）零变化。
+- 修复 `OnPreviewKeyDown` 未解包 `Key.System`：Alt+字母、Alt+方向与单独 F10 此前在所有模式下都不触发，现与命令路由对齐。非 win32 模式下这些键由「无反应」变为按既有 EncodeKey / ESC 前缀语义工作（激活既有意图代码，属行为变化）。
+- 渲染热路径：完成的 GPU 帧不再因新输出取代内容而整帧丢弃（保留资源版本与前缓冲检查，下一帧增量补画待处理变更）；GPU 等待由 `Thread.Sleep(1)`（实际约 15.6ms）改为 `SpinWait`，D3DImage 持锁降到亚毫秒；光标动画不再每 vsync 强制全屏重绘，改走既有光标行带增量路径；输出路径渲染与快照应用提升到 Render 优先级。同步 / 取消 / 资源释放契约、零等待 TryLock 失败分支配对、前缓冲不可用保留绑定、半透明背景全量重绘均不变。
+- 显示版本 `1.2.6a`，NuGet 构建版本 `1.2.6-a`，数字版本 / MSI `1.2.6`，MSIX 清单 `1.2.6.0`。
+- 本轮验证：Debug / Release 锁定构建均 0 警告 / 0 错误。仓库外探针 56 项通过：win32 Ctrl+C/A 字节回归、特殊键全表（Esc/Enter/Back/Tab/四方向/Home/End/Ins/Del/PgUp/PgDn/F1–F12）VK/Sc/Uc/Cs、Ctrl+方向 Cs=264、Ctrl+Enter Uc=10、Ctrl+Backspace Uc=127、Alt+字母 Uc=0、Ctrl+Shift+字母 Cs=24、Shift+Tab、Ctrl+Space，非 win32 EncodeKey/EncodeControlCharacter golden 不变（Ctrl+C→ETX 等），以及 win32/DECCKM 模式位跨备用屏持久、仅 RIS 复位。
+- 已知限制：AltGr 字符输入在两种模式下都被 Ctrl+字母分支拦截（既有问题，本轮不扩 scope）。真实 Shell 直开 Agent 的按键验收、输入法组合手感、光标残影与帧率属运行时主观项，本轮以算法探针与结构改动验证，建议人工在真实会话复核；既有发行验收缺口不变。
+
+## 1.2.4a Shell 修复（历史）
 
 - 新建页滚动视口改用与设置页一致的圆角裁切遮罩（共享 `RoundedScrollViewer` 模板），内容填满视口宽度，滚动到中部时卡片在视口边界按圆角裁切而非直角；Agent 编辑器的路径覆盖与配方区块改为圆角子卡片；预览并启动 / JSON 启用的确认对话框改用与重命名对话框一致的圆角无边框样式。
 - 块状光标移动改为帧率无关的指数平滑；动画帧提升到 Render 优先级；不透明背景下按已呈现光标行带做局部重绘；动画期渲染重试缩短到 16 ms，减少卡顿与残影。

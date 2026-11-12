@@ -14,7 +14,7 @@ Versions use three numeric components plus a letter suffix: `a` for a major rele
 
 ## Download and use
 
-[Download the 1.2.4a major release](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v1.2.4a). Packages target Windows x64 and include the .NET runtime.
+[Download the 1.2.6a major release](https://github.com/MoYiZiPhilament/ArkTerminal/releases/tag/v1.2.6a). Packages target Windows x64 and include the .NET runtime.
 
 | Format | Usage | Data directory |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ The first launch opens the new session page. Select a Shell / Profile or preview
 
 The first launch also selects the UI language from Windows (Simplified Chinese for a Chinese system, English otherwise) and saves the current Windows time zone. Both can be changed under **Settings → Configuration and Profiles**. Later launches use the saved choices rather than tracking system changes. User-facing times use the configured time zone; stored records and diagnostics retain UTC.
 
-`1.2.4a` is a major release that rounds the new-session page cards, smooths block-cursor motion, and improves Ctrl shortcut reliability, building on the English/Chinese localization and English-first README. Windows 10, cross-display, physical-input, and long-running resource validation remain incomplete. Actual MSI install / repair / uninstall / upgrade acceptance is still pending. MSIX has not completed isolated installation validation; MCP and administrator sessions remain unavailable under package identity. See [Project progress](PROGRESS.md) for the full scope.
+`1.2.6a` is a major release that fixes special-key input (Esc, Ctrl combinations, and function keys) for Agents launched directly from a Shell, and makes typing echo and block-cursor motion smooth by presenting completed GPU frames, shortening the D3DImage lock hold, and repainting cursor row bands incrementally at render priority. It builds on the English/Chinese localization and English-first README. Windows 10, cross-display, physical-input, and long-running resource validation remain incomplete. Actual MSI install / repair / uninstall / upgrade acceptance is still pending. MSIX has not completed isolated installation validation; MCP and administrator sessions remain unavailable under package identity. See [Project progress](PROGRESS.md) for the full scope.
 
 ## Features
 
@@ -65,7 +65,7 @@ pwsh -File Packaging/Build-Packages.ps1 -WindowsSdkBin '<Windows SDK x64 tools d
 pwsh -File Packaging/Build-Msi.ps1
 ```
 
-Packaging also requires the Windows SDK and WiX toolchains. See [Packaging instructions](Packaging/README.md) for exact versions and setup. Default output is `bin/Packages/1.2.4a/`, containing ZIP, MSIX, MSI, and SHA-256 manifests. The exe and MSI are not Authenticode-signed; MSIX uses an ephemeral development certificate.
+Packaging also requires the Windows SDK and WiX toolchains. See [Packaging instructions](Packaging/README.md) for exact versions and setup. Default output is `bin/Packages/1.2.6a/`, containing ZIP, MSIX, MSI, and SHA-256 manifests. The exe and MSI are not Authenticode-signed; MSIX uses an ephemeral development certificate.
 
 ## Source and documentation
 

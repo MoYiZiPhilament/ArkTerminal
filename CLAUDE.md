@@ -18,7 +18,7 @@ dotnet build ArkTerminal.sln -c Release -p:RestoreLockedMode=true
 dotnet run --project ArkTerminal.csproj -c Release --no-build -- --portable
 ```
 
-当前版本 `1.2.4a`（构建版本 `1.2.4-a`，数字版本 `1.2.4`）；依赖锁定，运行时固定 `10.0.11`。打包使用现有 [Packaging/](Packaging/) 脚本，不新增测试工程或仓库报告脚手架。
+当前版本 `1.2.6a`（构建版本 `1.2.6-a`，数字版本 `1.2.6`）；依赖锁定，运行时固定 `10.0.11`。打包使用现有 [Packaging/](Packaging/) 脚本，不新增测试工程或仓库报告脚手架。
 
 版本数字使用 `x.x.x`；`a` 为主要版本，`b` 为测试版本（替代原 `preview`），`c` 为特殊处理版本。显示、标签与包名保留后缀，底层工具链固定格式的元数据不作为显示版本。MSIX 系统清单允许按 Windows 要求使用四段数字。
 
@@ -30,5 +30,5 @@ dotnet run --project ArkTerminal.csproj -c Release --no-build -- --portable
 - 历史 / 转录默认关闭，诊断不收正文；不改 Agent 全局配置，不遥测或自动上传。
 - 上下文有界并经用户检查；交接采用复制后手动粘贴，执行命令须另行确认并使用新会话。
 - MCP 只读、单会话、逐字段授权，不增加写入工具；UAC 沿用受限辅助器与身份核验。
-- `1.2.4a` 是主要版本。MSIX 的安装 / MCP / UAC、MSI 安装生命周期、Windows 10、跨显示器、物理输入、长期资源与真实模型任务等验收缺口仍保留。
+- `1.2.6a` 是主要版本。MSIX 的安装 / MCP / UAC、MSI 安装生命周期、Windows 10、跨显示器、物理输入、长期资源与真实模型任务等验收缺口仍保留。
 - 不自动扩展后续功能；自动更新与云同步不做。UI 文案精简不得移除权限、范围和执行确认所需信息。
