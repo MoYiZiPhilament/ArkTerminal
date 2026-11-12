@@ -54,7 +54,7 @@ public sealed class Direct3DSharedSurface : IDisposable
     public bool IsAvailable => _image.IsFrontBufferAvailable && !_disposed;
     internal bool LastRenderWasBusy { get; private set; }
 
-    public async Task<bool> RenderAsync(float dpi, Action<ID2D1RenderTarget> draw, Int32Rect? dirtyRect = null, Func<bool>? isCurrent = null)
+    public async Task<bool> RenderAsync(float dpi, Action<ID2D1RenderTarget> draw, Int32Rect? dirtyRect = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         LastRenderWasBusy = _rendering;
@@ -91,6 +91,7 @@ public sealed class Direct3DSharedSurface : IDisposable
             await Task.Run(() =>
             {
                 var timeout = System.Diagnostics.Stopwatch.StartNew();
+                var spin = new System.Threading.SpinWait();
                 while (true)
                 {
                     cancellation.Token.ThrowIfCancellationRequested();
@@ -103,11 +104,14 @@ public sealed class Direct3DSharedSurface : IDisposable
                     {
                         throw new TimeoutException(Localize.T("Text0409"));
                     }
-                    System.Threading.Thread.Sleep(1);
+                    spin.SpinOnce();
                 }
             });
 
-            if (version != _resourceVersion || !_image.IsFrontBufferAvailable || isCurrent?.Invoke() == false)
+            // Present the completed frame even if newer output has superseded its content;
+            // the next frame repaints the pending changes incrementally. Only a resource
+            // reset or a lost front buffer invalidates the drawn surface.
+            if (version != _resourceVersion || !_image.IsFrontBufferAvailable)
             {
                 return false;
             }

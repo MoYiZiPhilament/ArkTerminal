@@ -517,36 +517,47 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         var alt = modifiers.HasFlag(ModifierKeys.Alt);
         var shift = modifiers.HasFlag(ModifierKeys.Shift);
         if (_imeHost?.OwnsKeyInput == true) return;
-        if (_session.State == SessionState.Running && IsInputFocused && e.Key == Key.Space && modifiers is ModifierKeys.None or ModifierKeys.Shift)
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var win32 = _session.Win32InputModeEnabled;
+        if (_session.State == SessionState.Running && IsInputFocused && key == Key.Space && modifiers is ModifierKeys.None or ModifierKeys.Shift)
         {
             // TextBox handles Space as an editing command without raising TextInput.
             Submit(" ");
             e.Handled = true;
             return;
         }
-        if (control && e.Key is >= Key.A and <= Key.Z)
+        if (control && key is >= Key.A and <= Key.Z)
         {
-            var character = (char)('A' + e.Key - Key.A);
-            Submit(_session.Win32InputModeEnabled && !alt
-                ? TerminalInputEncoder.EncodeWin32ControlCharacter(character)
+            var character = (char)('A' + key - Key.A);
+            Submit(win32
+                ? TerminalInputEncoder.EncodeWin32Character(character, true, alt, shift)
                 : TerminalInputEncoder.EncodeControlCharacter(character, alt));
             e.Handled = true;
             return;
         }
-        if (alt && e.Key is >= Key.A and <= Key.Z)
+        if (alt && key is >= Key.A and <= Key.Z)
         {
-            Submit("\u001b" + char.ToLowerInvariant((char)('a' + e.Key - Key.A)));
+            var character = (char)('a' + key - Key.A);
+            Submit(win32
+                ? TerminalInputEncoder.EncodeWin32Character(character, false, true, shift)
+                : "\u001b" + char.ToLowerInvariant(character));
             e.Handled = true;
             return;
         }
-        if (e.Key == Key.Tab && shift)
+        if (win32 && key == Key.Space && (control || alt))
         {
-            Submit("\u001b[Z");
+            Submit(TerminalInputEncoder.EncodeWin32Character(' ', control, alt, shift));
+            e.Handled = true;
+            return;
+        }
+        if (key == Key.Tab && shift)
+        {
+            Submit(win32 ? TerminalInputEncoder.EncodeWin32Key(TerminalKey.Tab, false, false, true) : "\u001b[Z");
             e.Handled = true;
             return;
         }
 
-        var terminalKey = e.Key switch
+        var terminalKey = key switch
         {
             Key.Enter => TerminalKey.Enter,
             Key.Back => TerminalKey.Backspace,
@@ -578,7 +589,9 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         };
         if (terminalKey is not null)
         {
-            Submit(TerminalInputEncoder.EncodeKey(terminalKey.Value, control, alt, _session.ApplicationCursorKeys));
+            Submit(win32
+                ? TerminalInputEncoder.EncodeWin32Key(terminalKey.Value, control, alt, shift)
+                : TerminalInputEncoder.EncodeKey(terminalKey.Value, control, alt, _session.ApplicationCursorKeys));
             e.Handled = true;
         }
     }
@@ -731,8 +744,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             var presented = await _surface.RenderAsync(
                 (float)(96 * scale),
                 target => _renderer.Draw(target, snapshot, _fonts!, startRow, endRow, _composition, _selection, _searchMatches, _visualStyle, cursorPosition),
-                dirtyRect,
-                () => version == _renderVersion);
+                dirtyRect);
             if (presented)
             {
                 Interlocked.Increment(ref _publishedFrames);
@@ -799,7 +811,13 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             SyncCursorAnimationClock();
             return;
         }
-        if (!_renderQueued && !_renderRetry.IsEnabled) RequestFullRender(DispatcherPriority.Render);
+        if (!_renderQueued && !_renderRetry.IsEnabled)
+        {
+            // Repaint only the cursor row bands; forcing a full invalidation here would
+            // redraw the whole screen on every vsync and defeat the incremental path.
+            Interlocked.Increment(ref _redrawRequests);
+            QueueRender(DispatcherPriority.Render);
+        }
     }
 
     private void RequestFullRender(DispatcherPriority priority = DispatcherPriority.Background)
@@ -810,7 +828,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
         QueueRender(priority);
     }
 
-    private void QueueRender(DispatcherPriority priority = DispatcherPriority.Background)
+    private void QueueRender(DispatcherPriority priority = DispatcherPriority.Render)
     {
         if (_renderQueued || _renderRetry.IsEnabled || !_active || !IsLoaded || !IsVisible || (_session is null && _preview is null))
         {
@@ -845,7 +863,7 @@ public sealed class DirectWriteTerminalControl : FrameworkElement
             if (_snapshotUpdateQueued) return;
             _snapshotUpdateQueued = true;
         }
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, ApplyQueuedSnapshotChanges);
+        Dispatcher.BeginInvoke(DispatcherPriority.Render, ApplyQueuedSnapshotChanges);
     }
 
     private void ApplyQueuedSnapshotChanges()
