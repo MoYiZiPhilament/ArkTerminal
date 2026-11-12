@@ -1,6 +1,6 @@
 # ArkTerminal 开发指南
 
-项目由 **GPT-6.1 Sol** 和 **Kimi K3.1 Pro** 完成；[Prompt/](Prompt/) 为分段完成提示词，图标由 **GPT Image 2.5 Sunburst** 绘制。
+项目由 **GPT-6.1 Sol**、**Kimi K3.1 Pro** 和 **Qwen4 Max Preview** 完成；[Prompt/](Prompt/) 为分段完成提示词，图标由 **GPT Image 2.5 Sunburst** 绘制。
 
 本文只保留当前开发约束与架构入口。功能与使用见 [README.md](README.md)，阶段状态见 [PROGRESS.md](PROGRESS.md)，截至 `0.1.1a-preview` 的完整历史原文见 [实施交接归档](docs/IMPLEMENTATION-HISTORY.md)。历史中的“未实现 / 未提交 / 下一阶段”仅描述当时状态，不覆盖当前源码和最新要求。
 

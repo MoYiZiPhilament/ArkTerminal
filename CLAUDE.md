@@ -2,7 +2,7 @@
 
 ArkTerminal 是 Windows 原生 WPF Shell / Agent CLI 工作台，采用 .NET 10、ConPTY 和 DirectWrite / Direct3D。
 
-项目由 **GPT-6.1 Sol** 和 **Kimi K3.1 Pro** 完成。[Prompt/](Prompt/) 保存分段完成提示词；应用图标由 **GPT Image 2.5 Sunburst** 绘制。署名记录项目创作来源，不表示应用内置这些模型服务。
+项目由 **GPT-6.1 Sol**、**Kimi K3.1 Pro** 和 **Qwen4 Max Preview** 完成。[Prompt/](Prompt/) 保存分段完成提示词；应用图标由 **GPT Image 2.5 Sunburst** 绘制。署名记录项目创作来源，不表示应用内置这些模型服务。
 
 ## 开始工作
 
